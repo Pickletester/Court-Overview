@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>LevelUp Pickleball — All Courts</title>
+<meta name="viewport" content="width=3840, initial-scale=1"/>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #080e1a;
+    --panel:    #0d1525;
+    --border:   #1a2a45;
+    --blue1:    #0f3460;
+    --blue2:    #1a4a8a;
+    --accent:   #3b82f6;
+    --green:    #22c55e;
+    --yellow:   #facc15;
+    --red:      #ef4444;
+    --text:     #e8f0fe;
+    --muted:    #7090b8;
+    --court-blue: #2d6be4;
+  }
+
+  html, body {
+    width: 3840px;
+    height: 2160px;
+    overflow: hidden;
+    background: var(--bg);
+    font-family: 'Barlow', sans-serif;
+    color: var(--text);
+  }
+
+  /* ── BACKGROUND TEXTURE ── */
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse 2000px 1000px at 50% -200px, rgba(30,80,180,0.18) 0%, transparent 70%),
+      radial-gradient(ellipse 1200px 800px at 10% 110%, rgba(15,50,120,0.12) 0%, transparent 60%),
+      repeating-linear-gradient(0deg, transparent, transparent 79px, rgba(255,255,255,0.012) 79px, rgba(255,255,255,0.012) 80px),
+      repeating-linear-gradient(90deg, transparent, transparent 79px, rgba(255,255,255,0.012) 79px, rgba(255,255,255,0.012) 80px);
+    pointer-events: none; z-index: 0;
+  }
+
+  /* ── HEADER ── */
+  #header {
+    position: relative; z-index: 10;
+    height: 130px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 60px;
+    background: linear-gradient(180deg, rgba(10,20,50,0.95) 0%, rgba(8,14,26,0.85) 100%);
+    border-bottom: 2px solid var(--border);
+  }
+  #header::after {
+    content: "";
+    position: absolute; bottom: -4px; left: 60px; right: 60px; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), var(--court-blue), var(--accent), transparent);
+    opacity: 0.6;
+  }
+
+  .logo-area {
+    display: flex; align-items: center; gap: 28px;
+  }
+  .logo-img {
+    height: 72px;
+    filter: drop-shadow(0 0 16px rgba(59,130,246,0.5));
+  }
+  .logo-divider {
+    width: 2px; height: 56px;
+    background: linear-gradient(180deg, transparent, var(--accent), transparent);
+    opacity: 0.5;
+  }
+  .logo-text {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 36px; font-weight: 800;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--text);
+    text-shadow: 0 0 30px rgba(59,130,246,0.4);
+  }
+  .logo-sub {
+    font-size: 18px; font-weight: 500;
+    letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--muted); margin-top: 4px;
+  }
+
+  #header-center {
+    text-align: center;
+  }
+  #header-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 48px; font-weight: 900;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    background: linear-gradient(90deg, #60a5fa, #e8f0fe, #60a5fa);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  #header-date {
+    font-size: 20px; color: var(--muted); letter-spacing: 0.1em;
+    margin-top: 6px;
+  }
+
+  #header-right {
+    text-align: right; min-width: 320px;
+  }
+  #master-clock {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 72px; font-weight: 900;
+    letter-spacing: 0.04em;
+    color: #fff;
+    text-shadow: 0 0 40px rgba(59,130,246,0.5);
+    line-height: 1;
+  }
+  #last-update {
+    font-size: 18px; color: var(--muted);
+    letter-spacing: 0.06em; margin-top: 4px;
+  }
+  #api-status {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 16px; color: var(--muted);
+    margin-top: 6px;
+  }
+  #api-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    transition: background 0.4s, box-shadow 0.4s;
+  }
+  #api-dot.error { background: var(--red); box-shadow: 0 0 8px var(--red); }
+  #api-dot.loading { background: var(--yellow); box-shadow: 0 0 8px var(--yellow); }
+
+  /* ── COURT GRID ── */
+  #grid {
+    position: relative; z-index: 5;
+    width: 3840px;
+    height: 2030px; /* 2160 - 130 header */
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    gap: 18px;
+    padding: 22px 28px 24px 28px;
+  }
+
+  /* ── COURT CARD ── */
+  .court-card {
+    position: relative;
+    background: var(--panel);
+    border: 1.5px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+    transition: border-color 0.4s, box-shadow 0.4s;
+  }
+  .court-card.active {
+    border-color: rgba(59,130,246,0.5);
+    box-shadow: 0 0 0 1px rgba(59,130,246,0.2), inset 0 0 60px rgba(59,130,246,0.04);
+  }
+  .court-card.expiring {
+    border-color: rgba(239,68,68,0.6);
+    box-shadow: 0 0 0 1px rgba(239,68,68,0.25), inset 0 0 60px rgba(239,68,68,0.06);
+  }
+  .court-card.empty {
+    border-color: rgba(26,42,69,0.6);
+    opacity: 0.72;
+  }
+
+  /* Court card top accent line */
+  .court-card::before {
+    content: "";
+    position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0;
+    transition: opacity 0.4s;
+  }
+  .court-card.active::before { opacity: 0.7; }
+  .court-card.expiring::before {
+    background: linear-gradient(90deg, transparent, var(--red), transparent);
+    opacity: 1;
+    animation: topLineFlash 1.5s ease-in-out infinite;
+  }
+  @keyframes topLineFlash { 0%,100%{opacity:0.5} 50%{opacity:1} }
+
+  /* ── COURT CARD HEADER ── */
+  .card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 18px 10px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .court-number {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 52px; font-weight: 900;
+    line-height: 1;
+    color: #fff;
+    text-shadow: 0 0 20px rgba(59,130,246,0.4);
+    transition: color 0.3s, text-shadow 0.3s;
+  }
+  .court-card.expiring .court-number {
+    color: var(--red);
+    text-shadow: 0 0 20px rgba(239,68,68,0.6);
+    animation: numPulse 1.5s ease-in-out infinite;
+  }
+  @keyframes numPulse { 0%,100%{opacity:1} 50%{opacity:0.7} }
+
+  .court-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 14px; font-weight: 700;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--muted);
+    line-height: 1; margin-top: 2px;
+  }
+
+  .court-icon {
+    width: 52px; height: 38px;
+    opacity: 0.18;
+    flex-shrink: 0;
+  }
+  .court-card.active .court-icon { opacity: 0.28; }
+
+  /* ── CARD BODY ── */
+  .card-body {
+    flex: 1;
+    display: flex; flex-direction: column;
+    padding: 12px 18px 10px;
+    min-height: 0;
+    gap: 8px;
+  }
+
+  .section-label {
+    font-size: 13px; font-weight: 700;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    margin-bottom: 3px;
+  }
+  .section-label.current { color: var(--green); }
+  .section-label.next    { color: var(--yellow); }
+  .section-label.timer   { color: var(--muted); }
+
+  .event-name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 22px; font-weight: 700;
+    line-height: 1.15;
+    color: #fff;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .event-name.empty-text {
+    color: var(--muted); font-style: italic; font-weight: 400;
+    font-size: 18px;
+  }
+
+  .event-time {
+    font-size: 14px; color: var(--muted); margin-top: 2px;
+    font-weight: 500;
+  }
+
+  .divider {
+    height: 1px; background: var(--border); flex-shrink: 0;
+  }
+
+  /* ── SKILL BADGE ── */
+  .skill-badge {
+    display: inline-flex; align-items: center;
+    padding: 3px 10px; border-radius: 20px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 15px; font-weight: 800;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    color: #000; margin-top: 4px;
+    flex-shrink: 0; align-self: flex-start;
+  }
+
+  /* ── COUNTDOWN PILL ── */
+  .countdown-area {
+    margin-top: auto;
+    display: flex; align-items: center; justify-content: space-between;
+    background: rgba(0,0,0,0.3);
+    border-radius: 10px;
+    padding: 8px 14px;
+    flex-shrink: 0;
+  }
+  .countdown-label {
+    font-size: 13px; font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--muted);
+  }
+  .countdown-val {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 30px; font-weight: 900;
+    color: #fff; line-height: 1;
+    transition: color 0.3s;
+  }
+  .countdown-val.warn { color: var(--red); animation: cdFlash 1s ease-in-out infinite; }
+  .countdown-val.expired { color: var(--red); font-size: 22px; }
+  @keyframes cdFlash { 0%,100%{opacity:1} 50%{opacity:0.6} }
+
+  /* ── LEVEL COLORS ── */
+  .level-45plus   { background: #cfd829; }
+  .level-40       { background: #f47855; }
+  .level-35       { background: #ee3c85; color: #fff !important; }
+  .level-30       { background: #22c55e; }
+  .level-20       { background: #38bdf8; }
+
+  /* ── FOOTER BAR ── */
+  #footer {
+    display: none; /* hidden — header handles status */
+  }
+
+  /* ── COUNTDOWN PROGRESS ARC (decorative) ── */
+  .progress-ring {
+    position: absolute;
+    top: 10px; right: 14px;
+    width: 40px; height: 40px;
+    opacity: 0.45;
+  }
+  .progress-ring circle {
+    fill: none; stroke-width: 3;
+    stroke-dasharray: 113;
+    stroke-linecap: round;
+    transform: rotate(-90deg);
+    transform-origin: 50% 50%;
+    transition: stroke-dashoffset 1s linear, stroke 0.4s;
+  }
+  .progress-ring .track { stroke: rgba(255,255,255,0.08); }
+  .progress-ring .fill  { stroke: var(--accent); }
+  .court-card.expiring .progress-ring .fill { stroke: var(--red); }
+
+  /* ── NEXT EVENT MINI ── */
+  .next-block {
+    display: flex; flex-direction: column;
+  }
+  .next-name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 18px; font-weight: 600;
+    color: #c0d0f0;
+    line-height: 1.2;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+  }
+  .next-name.empty-text { color: var(--muted); font-style: italic; }
+  .next-time { font-size: 13px; color: var(--muted); margin-top: 1px; }
+
+  /* ── PULSE DOTS ── */
+  .live-dot {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    flex-shrink: 0;
+    animation: livePulse 2s ease-in-out infinite;
+  }
+  @keyframes livePulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
+  .live-dot.inactive { background: var(--muted); box-shadow: none; animation: none; }
+
+  /* ── COURT MINI GRAPHIC ── */
+  .court-mini-svg {
+    position: absolute;
+    bottom: 0; right: 0;
+    width: 90px; height: 65px;
+    opacity: 0.04;
+    pointer-events: none;
+  }
+  .court-card.active .court-mini-svg { opacity: 0.06; }
+
+  /* ── NEXT COUNTDOWN ── */
+  .time-until {
+    font-size: 13px; color: var(--yellow);
+    font-weight: 600;
+  }
+
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<div id="header">
+  <div class="logo-area">
+    <img src="levelup-logo.png" alt="LevelUp Pickleball" class="logo-img"
+         onerror="this.style.display='none'">
+    <div class="logo-divider"></div>
+    <div>
+      <div class="logo-text">LevelUp Pickleball</div>
+      <div class="logo-sub">Court Status Board</div>
+    </div>
+  </div>
+
+  <div id="header-center">
+    <div id="header-title">All Courts — Live</div>
+    <div id="header-date"></div>
+  </div>
+
+  <div id="header-right">
+    <div id="master-clock">--:--</div>
+    <div id="last-update">Connecting...</div>
+    <div id="api-status">
+      <div id="api-dot" class="loading"></div>
+      <span id="api-status-text">Loading data...</span>
+    </div>
+  </div>
+</div>
+
+<!-- ── COURT GRID ── -->
+<div id="grid"></div>
+
+<script>
+(function(){
+
+  // ── CONFIG ────────────────────────────────────────────────
+  var TOTAL_COURTS = 16;
+  var TZ           = "America/New_York";
+  var PROXY_BASE   = "https://courtreserve-proxy.s-jackson.workers.dev/api/day";
+  var API_KEY      = "";
+  var REFRESH_MS   = 60000;   // poll ONCE per minute — shared across all courts
+  var MAX_BACKOFF  = 300000;
+
+  var EXCLUDE_NAMES = ["Pickleball 101"];
+  // ──────────────────────────────────────────────────────────
+
+  var refreshTimer  = null;
+  var refreshDelay  = REFRESH_MS;
+  var cacheEv       = [];
+  var cacheRes      = [];
+  var courtTimers   = {}; // countdown timers per court
+  var courtState    = {}; // {cur, nxt, cdTarget, cdMode} per court
+
+  // ── BUILD GRID ────────────────────────────────────────────
+  // Layout: rows of 8, top row = courts 9-16, bottom row = courts 1-8
+  // (Court 1 bottom-right, Court 16 bottom-left as seen in photo)
+  // Grid left-to-right top row: 16,15,14,13,12,11,10,9
+  // Grid left-to-right bottom row: 8,7,6,5,4,3,2,1
+  var topRow    = [16,15,14,13,12,11,10,9];
+  var bottomRow = [8,7,6,5,4,3,2,1];
+  var order     = topRow.concat(bottomRow);
+
+  var grid = document.getElementById("grid");
+  order.forEach(function(n){
+    var card = document.createElement("div");
+    card.className = "court-card";
+    card.id = "court-"+n;
+    card.innerHTML =
+      '<svg class="court-mini-svg" viewBox="0 0 90 65" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+        '<rect x="2" y="2" width="86" height="61" rx="2" stroke="white" stroke-width="1.5"/>' +
+        '<line x1="45" y1="2" x2="45" y2="63" stroke="white" stroke-width="1"/>' +
+        '<line x1="2" y1="32" x2="88" y2="32" stroke="white" stroke-width="1"/>' +
+        '<line x1="18" y1="2" x2="18" y2="63" stroke="white" stroke-width="0.7" stroke-dasharray="3,2"/>' +
+        '<line x1="72" y1="2" x2="72" y2="63" stroke="white" stroke-width="0.7" stroke-dasharray="3,2"/>' +
+        '<rect x="18" y="20" width="54" height="24" stroke="white" stroke-width="0.7"/>' +
+      '</svg>' +
+      '<svg class="progress-ring" id="ring-'+n+'" viewBox="0 0 40 40">' +
+        '<circle class="track" cx="20" cy="20" r="18"/>' +
+        '<circle class="fill" id="ring-fill-'+n+'" cx="20" cy="20" r="18" stroke-dashoffset="0"/>' +
+      '</svg>' +
+      '<div class="card-header">' +
+        '<div>' +
+          '<div class="court-number" id="cn-'+n+'">'+n+'</div>' +
+          '<div class="court-label">Court</div>' +
+        '</div>' +
+        '<div style="display:flex;align-items:center;gap:10px;">' +
+          '<div class="live-dot inactive" id="dot-'+n+'"></div>' +
+          '<svg class="court-icon" viewBox="0 0 52 38" fill="none">' +
+            '<rect x="1" y="1" width="50" height="36" rx="2" stroke="currentColor" stroke-width="1.5"/>' +
+            '<line x1="26" y1="1" x2="26" y2="37" stroke="currentColor" stroke-width="1"/>' +
+            '<line x1="1" y1="19" x2="51" y2="19" stroke="currentColor" stroke-width="1"/>' +
+            '<line x1="10" y1="1" x2="10" y2="37" stroke="currentColor" stroke-width="0.6" stroke-dasharray="2,2"/>' +
+            '<line x1="42" y1="1" x2="42" y2="37" stroke="currentColor" stroke-width="0.6" stroke-dasharray="2,2"/>' +
+          '</svg>' +
+        '</div>' +
+      '</div>' +
+      '<div class="card-body">' +
+        '<div>' +
+          '<div class="section-label current">In Progress</div>' +
+          '<div class="event-name empty-text" id="cur-name-'+n+'">No current event</div>' +
+          '<div class="event-time" id="cur-time-'+n+'"></div>' +
+          '<div id="skill-badge-'+n+'" style="display:none;" class="skill-badge"></div>' +
+        '</div>' +
+        '<div class="divider"></div>' +
+        '<div class="next-block">' +
+          '<div class="section-label next">Upcoming</div>' +
+          '<div class="next-name empty-text" id="nxt-name-'+n+'">No upcoming event</div>' +
+          '<div class="next-time" id="nxt-time-'+n+'"></div>' +
+        '</div>' +
+        '<div class="countdown-area">' +
+          '<div class="countdown-label" id="cd-lbl-'+n+'">Time Left</div>' +
+          '<div class="countdown-val" id="cd-val-'+n+'">--</div>' +
+        '</div>' +
+      '</div>';
+    grid.appendChild(card);
+  });
+
+  // ── CLOCK ─────────────────────────────────────────────────
+  function tickClock(){
+    var now = new Date();
+    var h = now.getHours(), m = now.getMinutes(), s = now.getSeconds();
+    var ampm = h >= 12 ? "PM" : "AM";
+    h = h % 12 || 12;
+    document.getElementById("master-clock").textContent =
+      pad2(h)+":"+pad2(m)+":"+pad2(s)+" "+ampm;
+
+    // date line
+    var days = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+    var months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+    document.getElementById("header-date").textContent =
+      days[now.getDay()]+", "+months[now.getMonth()]+" "+now.getDate()+", "+now.getFullYear();
+
+    var delay = 1000 - now.getMilliseconds();
+    setTimeout(tickClock, delay < 100 ? 100 : delay);
+  }
+
+  function pad2(n){ return (n<10?"0":"")+n; }
+
+  // ── UTILS ─────────────────────────────────────────────────
+  function toLocalNY(d){
+    try{
+      return d.toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",hour12:true,timeZone:TZ});
+    }catch(e){ return d.getHours()+":"+pad2(d.getMinutes()); }
+  }
+
+  function parseTimeAny(t){
+    if(!t) return null;
+    if(Object.prototype.toString.call(t)==="[object Date]") return isNaN(t.getTime())?null:t;
+    if(typeof t==="number") return new Date(t>1e12?t:t*1000);
+    if(typeof t==="string"){
+      var s=t.trim(); if(!s) return null;
+      var m=s.match(/^\/Date\((-?\d+)(?:[+-]\d{4})?\)\/$/i);
+      if(m) return new Date(parseInt(m[1],10));
+      var d=new Date(s);
+      if(!isNaN(d.getTime())) return d;
+      var a=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+      if(a){
+        var hr=+a[4],mn=+a[5],ap=(a[6]||"").toUpperCase();
+        if(ap==="PM"&&hr<12) hr+=12;
+        if(ap==="AM"&&hr===12) hr=0;
+        var d2=new Date(+a[3],+a[1]-1,+a[2],hr,mn,0);
+        if(!isNaN(d2.getTime())) return d2;
+      }
+      var b=s.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/);
+      if(b){
+        var d3=new Date(+b[1],+b[2]-1,+b[3],+b[4],+b[5],+(b[6]||0));
+        if(!isNaN(d3.getTime())) return d3;
+      }
+    }
+    return null;
+  }
+
+  function pickArray(c){
+    if(!c) return [];
+    if(Array.isArray(c)) return c;
+    if(typeof c==="object"){
+      if(Array.isArray(c.Data))    return c.Data;
+      if(Array.isArray(c.data))    return c.data;
+      if(Array.isArray(c.Items))   return c.Items;
+      if(Array.isArray(c.Results)) return c.Results;
+    }
+    return [];
+  }
+
+  function isCancelled(x){
+    if(!x||typeof x!=="object") return false;
+    if(x.IsCanceled===true||x.IsCancelled===true||x.Cancelled===true) return true;
+    if(x.IsActive===false||x.Active===false) return true;
+    var s="";
+    if(typeof x.Status==="string") s+=" "+x.Status;
+    if(typeof x.EventStatus==="string") s+=" "+x.EventStatus;
+    if(typeof x.RegistrationStatus==="string") s+=" "+x.RegistrationStatus;
+    return s.toLowerCase().indexOf("cancel")>=0;
+  }
+
+  function isExcludedByName(name){
+    if(!name||!EXCLUDE_NAMES.length) return false;
+    var nl=String(name).toLowerCase();
+    for(var i=0;i<EXCLUDE_NAMES.length;i++)
+      if(nl.indexOf(EXCLUDE_NAMES[i].toLowerCase())>=0) return true;
+    return false;
+  }
+
+  function containsCourtN(rec, n){
+    n=Number(n)||1;
+    if(!rec) return false;
+    var visited=(typeof WeakSet!=="undefined")?new WeakSet():null;
+    function strMatch(s){
+      if(!s) return false;
+      s=String(s).toLowerCase();
+      if(s.indexOf("court")===-1) return false;
+      var exact=new RegExp("courts?\\s*#?\\s*"+n+"(?!\\d)","g");
+      if(exact.test(s)) return true;
+      var rg=/courts?\s*#?\s*(\d+)\s*[-–]\s*#?\s*(\d+)/g,m;
+      while((m=rg.exec(s))!==null){
+        var a=+m[1],b=+m[2];
+        if(n>=Math.min(a,b)&&n<=Math.max(a,b)) return true;
+      }
+      var lg=/courts?\s*#?\s*(\d+)(?!\d)/g,lm;
+      while((lm=lg.exec(s))!==null){
+        if(parseInt(lm[1],10)===n) return true;
+      }
+      return false;
+    }
+    function courtKey(k){
+      if(!k) return false;
+      var s=String(k).toLowerCase();
+      return s==="courtnumber"||s==="courtno"||s==="courtid"||
+             s==="court_id"||s==="court_number"||s==="resourceid"||
+             s==="resource_id"||s==="facilitycourtid";
+    }
+    function scan(val,key){
+      if(val==null) return false;
+      var t=typeof val;
+      if(t==="number") return courtKey(key)&&(val===n);
+      if(t==="string") return strMatch(val);
+      if(Array.isArray(val)){
+        for(var i=0;i<val.length;i++) if(scan(val[i],key)) return true;
+        return false;
+      }
+      if(t==="object"){
+        if(visited&&visited.has(val)) return false;
+        if(visited) visited.add(val);
+        for(var k in val){
+          if(!Object.prototype.hasOwnProperty.call(val,k)) continue;
+          if(scan(val[k],k)) return true;
+        }
+      }
+      return false;
+    }
+    return scan(rec,"");
+  }
+
+  function normalizeEvent(x){
+    if(isCancelled(x)) return null;
+    var nm=x.EventName||x.Name||x.Title||x.name||x.title||"Event";
+    var s=parseTimeAny(x.StartDateTime||x.StartTime||x.Start||x.startDateTime||x.start);
+    var e=parseTimeAny(x.EndDateTime  ||x.EndTime  ||x.End  ||x.endDateTime  ||x.end);
+    if(!s||!e) return null;
+    return {kind:"event",name:nm,start:s,end:e,raw:x};
+  }
+
+  function shortName(p){
+    var fn=(p.FirstName||p.firstName||"").trim();
+    var ln=(p.LastName ||p.lastName ||"").trim();
+    var i=fn?fn.charAt(0).toUpperCase()+".":"";
+    return (i&&ln)?(i+" "+ln):(i||ln||"");
+  }
+
+  function normalizeResv(x){
+    var s=parseTimeAny(x.StartTime||x.StartDateTime||x.Start||x.startTime||x.start);
+    var e=parseTimeAny(x.EndTime  ||x.EndDateTime  ||x.End  ||x.endTime  ||x.end);
+    if(!s||!e) return null;
+    var name="";
+    if(Array.isArray(x.Players)&&x.Players.length){
+      var arr=[]; for(var i=0;i<x.Players.length;i++) arr.push(shortName(x.Players[i]||{}));
+      name=arr.join(", ");
+    }
+    if(!name&&x.ReservationTypeName) name=x.ReservationTypeName;
+    if(!name) name="Reserved";
+    return {kind:"res",name:name,start:s,end:e,raw:x};
+  }
+
+  // ── LEVEL COLORS ──────────────────────────────────────────
+  function getLevelInfo(title){
+    var t=(title||""),tl=t.toLowerCase();
+    var tn=tl.replace(/\s+/g,"").replace(/[–—]/g,"-");
+    var info={cls:null,label:""};
+    if(tn.indexOf("4.5+")>=0||tn.indexOf("4.5-")>=0||tn.indexOf("5.0")>=0)
+      { info.cls="level-45plus"; info.label="4.5+"; }
+    else if(tn.indexOf("4.0-4.4")>=0||tn.indexOf("4.0-4.49")>=0||tn.indexOf("4.0-4.5")>=0||tn.indexOf("4.0-4")>=0)
+      { info.cls="level-40"; info.label="4.0–4.49"; }
+    else if(tn.indexOf("3.5-3.9")>=0||tn.indexOf("3.5-3.99")>=0||tn.indexOf("3.5+")>=0)
+      { info.cls="level-35"; info.label="3.5–3.99"; }
+    else if(tn.indexOf("3.0-3.4")>=0||tn.indexOf("3.0-3.49")>=0)
+      { info.cls="level-30"; info.label="3.0–3.49"; }
+    else if(tn.indexOf("2.0-2.9")>=0||tn.indexOf("2.0-2.99")>=0)
+      { info.cls="level-20"; info.label="2.0–2.99"; }
+    else if(tl.indexOf("advanced")>=0)
+      { info.cls="level-45plus"; info.label="4.5+"; }
+    else if(tl.indexOf("intermediate+")>=0)
+      { info.cls="level-35"; info.label="3.5–3.99"; }
+    else if(tl.indexOf("intermediate")>=0)
+      { info.cls="level-30"; info.label="3.0–3.49"; }
+    else if(tl.indexOf("beginner")>=0)
+      { info.cls="level-20"; info.label="2.0–2.99"; }
+    return info;
+  }
+
+  // ── COMPUTE PER COURT ─────────────────────────────────────
+  function computeCourt(n){
+    var ev=[],rs=[],i;
+    for(i=0;i<cacheEv.length; i++){ var a=normalizeEvent(cacheEv[i]);  if(a) ev.push(a); }
+    for(i=0;i<cacheRes.length;i++){ var b=normalizeResv(cacheRes[i]);   if(b) rs.push(b); }
+
+    var evC=[],rsC=[],evFallback=[];
+    for(i=0;i<ev.length;i++){
+      if(isExcludedByName(ev[i].name)) continue;
+      var rc=ev[i].raw.Courts;
+      if(Array.isArray(rc)&&rc.length===0) evFallback.push(ev[i]);
+      else if(containsCourtN(ev[i].raw,n)) evC.push(ev[i]);
+    }
+    for(i=0;i<rs.length;i++){
+      if(isExcludedByName(rs[i].name)) continue;
+      if(containsCourtN(rs[i].raw,n)) rsC.push(rs[i]);
+    }
+
+    var primary=rsC.concat(evC);
+    primary.sort(function(a,b){ return a.start-b.start; });
+    evFallback.sort(function(a,b){ return a.start-b.start; });
+
+    var now=new Date(), cur=null, nxt=null, it, i2;
+    for(i2=0;i2<primary.length;i2++){
+      it=primary[i2];
+      if(now>=it.start&&now<=it.end){
+        if(!cur){ cur=it; }
+        else if(it.end>cur.end){ cur=it; }
+        else if(it.end.getTime()===cur.end.getTime()&&it.kind==="res"&&cur.kind==="event"){ cur=it; }
+      }
+      if(!nxt&&now<it.start) nxt=it;
+    }
+    if(!cur){
+      for(i2=0;i2<evFallback.length;i2++){
+        it=evFallback[i2]; if(now>=it.start&&now<=it.end){ cur=it; break; }
+      }
+    }
+    if(!nxt){
+      for(i2=0;i2<evFallback.length;i2++){
+        it=evFallback[i2]; if(now<it.start){ nxt=it; break; }
+      }
+    }
+    return {cur:cur, nxt:nxt};
+  }
+
+  // ── RENDER COURT ─────────────────────────────────────────
+  function renderCourt(n, cur, nxt){
+    var card   = document.getElementById("court-"+n);
+    var curName= document.getElementById("cur-name-"+n);
+    var curTime= document.getElementById("cur-time-"+n);
+    var nxtName= document.getElementById("nxt-name-"+n);
+    var nxtTime= document.getElementById("nxt-time-"+n);
+    var badge  = document.getElementById("skill-badge-"+n);
+    var dot    = document.getElementById("dot-"+n);
+
+    // Card state classes
+    card.className = "court-card";
+    if(cur){
+      var diff = cur.end.getTime() - Date.now();
+      if(diff <= 60000) card.classList.add("expiring");
+      else              card.classList.add("active");
+    } else {
+      card.classList.add("empty");
+    }
+
+    // Live dot
+    dot.className = cur ? "live-dot" : "live-dot inactive";
+
+    // Current event
+    if(cur){
+      curName.className = "event-name";
+      curName.textContent = cur.name;
+      curTime.textContent = toLocalNY(cur.start)+" – "+toLocalNY(cur.end);
+      // Skill badge
+      var lv = getLevelInfo(cur.name);
+      if(lv.cls){
+        badge.style.display = "inline-flex";
+        badge.className = "skill-badge "+lv.cls;
+        badge.textContent = lv.label;
+      } else {
+        badge.style.display = "none";
+      }
+    } else {
+      curName.className = "event-name empty-text";
+      curName.textContent = "No current event";
+      curTime.textContent = "";
+      badge.style.display = "none";
+    }
+
+    // Next event
+    if(nxt){
+      nxtName.className = "next-name";
+      nxtName.textContent = nxt.name;
+      nxtTime.textContent = toLocalNY(nxt.start)+" – "+toLocalNY(nxt.end);
+    } else {
+      nxtName.className = "next-name empty-text";
+      nxtName.textContent = "No upcoming event";
+      nxtTime.textContent = "";
+    }
+
+    // Start countdown
+    startCountdownForCourt(n, cur, nxt);
+  }
+
+  // ── COUNTDOWN PER COURT ──────────────────────────────────
+  function startCountdownForCourt(n, cur, nxt){
+    if(courtTimers[n]) clearInterval(courtTimers[n]);
+    courtState[n] = {cur:cur, nxt:nxt};
+
+    var cdValEl  = document.getElementById("cd-val-"+n);
+    var cdLblEl  = document.getElementById("cd-lbl-"+n);
+    var ringFill = document.getElementById("ring-fill-"+n);
+    var card     = document.getElementById("court-"+n);
+
+    // We store the total duration for the ring calculation
+    var ringTotal = 0;
+    if(cur) ringTotal = (cur.end.getTime() - cur.start.getTime());
+    else if(nxt) ringTotal = (nxt.start.getTime() - Date.now()) + 1;
+
+    function tick(){
+      var now = Date.now();
+      var state = courtState[n];
+      var c = state.cur, nx = state.nxt;
+
+      if(c && now <= c.end.getTime()){
+        var diff = c.end.getTime() - now;
+        cdLblEl.textContent = "Time Left";
+
+        // Update card state
+        if(diff <= 60000){
+          card.className = "court-card expiring";
+          cdValEl.className = "countdown-val warn";
+          cdValEl.textContent = Math.ceil(diff/1000)+"s";
+        } else {
+          card.className = "court-card active";
+          cdValEl.className = "countdown-val";
+          var tm = Math.floor(diff/60000);
+          if(tm >= 60) cdValEl.textContent = Math.floor(tm/60)+"h "+( tm%60)+"m";
+          else         cdValEl.textContent = tm+"m";
+        }
+
+        // Progress ring: fraction of time remaining
+        if(ringTotal > 0){
+          var frac = Math.max(0, Math.min(1, diff / ringTotal));
+          var circ = 113;
+          ringFill.style.strokeDashoffset = circ * (1 - frac);
+        }
+
+      } else if(!c && nx && now < nx.start.getTime()){
+        var diff2 = nx.start.getTime() - now;
+        cdLblEl.textContent = "Starts In";
+        cdValEl.className = "countdown-val";
+        var tm2 = Math.floor(diff2/60000);
+        if(tm2 >= 60) cdValEl.textContent = Math.floor(tm2/60)+"h "+(tm2%60)+"m";
+        else if(diff2 <= 60000) cdValEl.textContent = Math.ceil(diff2/1000)+"s";
+        else cdValEl.textContent = tm2+"m";
+        ringFill.style.strokeDashoffset = 113;
+        card.className = "court-card empty";
+
+      } else if(c && now > c.end.getTime()){
+        // Expired — show "TIME UP" briefly
+        card.className = "court-card expiring";
+        cdValEl.className = "countdown-val expired";
+        cdValEl.textContent = "TIME UP";
+        cdLblEl.textContent = "";
+        ringFill.style.strokeDashoffset = 113;
+
+      } else {
+        cdLblEl.textContent = "Time Left";
+        cdValEl.className = "countdown-val";
+        cdValEl.textContent = "--";
+        ringFill.style.strokeDashoffset = 113;
+        card.className = "court-card empty";
+      }
+    }
+
+    tick();
+    courtTimers[n] = setInterval(tick, 1000);
+  }
+
+  // ── ALL COURTS RENDER ─────────────────────────────────────
+  function renderAll(){
+    for(var n=1; n<=TOTAL_COURTS; n++){
+      var res = computeCourt(n);
+      renderCourt(n, res.cur, res.nxt);
+    }
+  }
+
+  // ── API ───────────────────────────────────────────────────
+  function setApiStatus(state, msg){
+    var dot  = document.getElementById("api-dot");
+    var text = document.getElementById("api-status-text");
+    var upd  = document.getElementById("last-update");
+    dot.className = state === "ok" ? "" : state === "error" ? "error" : "loading";
+    if(msg) text.textContent = msg;
+    if(state === "ok"){
+      var now = new Date();
+      upd.textContent = "Updated "+pad2(now.getHours()%12||12)+":"+pad2(now.getMinutes())+":"+pad2(now.getSeconds())+(now.getHours()>=12?" PM":" AM");
+    }
+  }
+
+  function refresh(){
+    setApiStatus("loading", "Fetching data...");
+    // Single API call — no court param, gets all data
+    var url = PROXY_BASE;
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", url, true);
+    xhr.timeout = 10000;
+    if(API_KEY && API_KEY.trim()) xhr.setRequestHeader("X-API-Key", API_KEY.trim());
+    xhr.onreadystatechange = function(){
+      if(xhr.readyState === 4){
+        if(xhr.status >= 200 && xhr.status < 300){
+          try{
+            var data = JSON.parse(xhr.responseText);
+            cacheEv  = pickArray(data.events);
+            cacheRes = pickArray(data.reservations);
+            renderAll();
+            setApiStatus("ok", "Live — all courts");
+            refreshDelay = REFRESH_MS;
+          } catch(e){
+            setApiStatus("error", "Parse error");
+            refreshDelay = Math.min(refreshDelay * 2, MAX_BACKOFF);
+          }
+        } else {
+          var msg = xhr.status === 429 ? "Rate limited" : xhr.status === 403 ? "Auth error" : "API error "+xhr.status;
+          setApiStatus("error", msg);
+          refreshDelay = Math.min(refreshDelay * 2, MAX_BACKOFF);
+          try{ renderAll(); }catch(e){}
+        }
+        schedule();
+      }
+    };
+    xhr.ontimeout = function(){ setApiStatus("error","Timeout"); refreshDelay=Math.min(refreshDelay*2,MAX_BACKOFF); schedule(); };
+    xhr.onerror   = function(){ setApiStatus("error","Network error"); refreshDelay=Math.min(refreshDelay*2,MAX_BACKOFF); schedule(); };
+    xhr.send();
+  }
+
+  function schedule(){
+    if(refreshTimer) clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(refresh, refreshDelay);
+    // Update countdown on next-minute boundary
+    document.getElementById("api-status-text").textContent =
+      "Next refresh in "+Math.round(refreshDelay/1000)+"s";
+  }
+
+  // ── INIT ─────────────────────────────────────────────────
+  tickClock();
+  refresh();
+
+})();
+</script>
+</body>
+</html>
