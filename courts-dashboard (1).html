@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>LevelUp Pickleball — All Courts</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 3840px; height: 2160px;
+    overflow: hidden;
+    background: #080e1a;
+    font-family: 'Barlow', sans-serif;
+    color: #e8f0fe;
+  }
+
+  body::before {
+    content: "";
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background:
+      repeating-linear-gradient(0deg,  transparent, transparent 107px, rgba(255,255,255,.013) 107px, rgba(255,255,255,.013) 108px),
+      repeating-linear-gradient(90deg, transparent, transparent 107px, rgba(255,255,255,.013) 107px, rgba(255,255,255,.013) 108px),
+      radial-gradient(ellipse 2400px 900px at 50% -100px, rgba(30,80,200,.15) 0%, transparent 70%);
+  }
+
+  /* ─── HEADER ─── */
+  #header {
+    position: relative; z-index: 10;
+    height: 128px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 56px;
+    background: linear-gradient(180deg,rgba(8,18,44,.98) 0%,rgba(8,14,26,.92) 100%);
+    border-bottom: 2px solid #1a2a45;
+  }
+  #header::after {
+    content:""; position:absolute; bottom:-4px; left:56px; right:56px; height:2px;
+    background:linear-gradient(90deg,transparent,#3b82f6,#2d6be4,#3b82f6,transparent);
+    opacity:.5;
+  }
+  .hd-logo { height:68px; filter:drop-shadow(0 0 18px rgba(59,130,246,.5)); }
+  .hd-div  { width:2px; height:52px; background:linear-gradient(180deg,transparent,#3b82f6,transparent); opacity:.4; margin:0 24px; }
+  .hd-name { font-family:'Barlow Condensed',sans-serif; font-size:34px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; text-shadow:0 0 28px rgba(59,130,246,.4); }
+  .hd-sub  { font-size:17px; font-weight:500; letter-spacing:.22em; text-transform:uppercase; color:#7090b8; margin-top:3px; }
+  #hd-title { font-family:'Barlow Condensed',sans-serif; font-size:46px; font-weight:900; letter-spacing:.18em; text-transform:uppercase;
+    background:linear-gradient(90deg,#60a5fa,#e8f0fe,#60a5fa); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+  #hd-date { font-size:19px; color:#7090b8; letter-spacing:.09em; margin-top:5px; text-align:center; }
+  #hd-right { text-align:right; min-width:310px; }
+  #master-clock { font-family:'Barlow Condensed',sans-serif; font-size:70px; font-weight:900; letter-spacing:.04em; color:#fff; line-height:1; text-shadow:0 0 40px rgba(59,130,246,.5); }
+  #api-row { display:flex; align-items:center; justify-content:flex-end; gap:9px; margin-top:5px; }
+  #api-dot { width:11px; height:11px; border-radius:50%; background:#22c55e; box-shadow:0 0 8px #22c55e; transition:background .4s,box-shadow .4s; }
+  #api-dot.loading { background:#facc15; box-shadow:0 0 8px #facc15; }
+  #api-dot.error   { background:#ef4444; box-shadow:0 0 8px #ef4444; }
+  #api-txt         { font-size:17px; color:#7090b8; }
+  #next-ref        { font-size:15px; color:#4a6080; margin-top:4px; }
+
+  /* ─── GRID ─── */
+  #grid {
+    position: relative; z-index: 5;
+    width: 3840px; height: 2032px;
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    gap: 16px;
+    padding: 20px 24px 22px;
+  }
+
+  /* ─── CARD ─── */
+  .card {
+    position: relative;
+    border-radius: 18px; overflow: hidden;
+    display: flex; flex-direction: column;
+    border: 2px solid #1a2a45;
+    background: #0d1525;
+    transition: border-color .5s, box-shadow .5s;
+  }
+  .card.active   { border-color: rgba(59,130,246,.45); box-shadow:0 0 0 1px rgba(59,130,246,.15); }
+  .card.expiring { border-color: rgba(239,68,68,.65);  box-shadow:0 0 0 1px rgba(239,68,68,.2); }
+  .card.empty    { border-color: #151f35; opacity:.75; }
+
+  /* flood layer */
+  .flood {
+    position: absolute; inset: 0; z-index: 0;
+    opacity: 0; transition: opacity .65s;
+    pointer-events: none;
+  }
+  .card.leveled .flood { opacity: 1; }
+
+  /* flood gradients — exact overlay colors from original file */
+  .f45 { background: linear-gradient(145deg,#9ca800,#cfd829 55%,#e2ec50); }   /* lime-yellow */
+  .f40 { background: linear-gradient(145deg,#c04010,#f47855 55%,#ff9a78); }   /* orange      */
+  .f35 { background: linear-gradient(145deg,#4a1070,#6d28d9 55%,#9050f0); }   /* purple      */
+  .f30 { background: linear-gradient(145deg,#0a5020,#15803d 55%,#22c55e); }   /* green       */
+  .f20 { background: linear-gradient(145deg,#0360a0,#0ea5e9 55%,#38bdf8); }   /* sky blue    */
+
+  /* top accent line */
+  .card::before {
+    content:""; position:absolute; top:0; left:0; right:0; height:4px; z-index:6;
+    background:linear-gradient(90deg,transparent,var(--al,#3b82f6),transparent);
+    opacity:.7; transition:opacity .4s;
+  }
+  .card.empty::before { opacity:.2; }
+  .card.expiring::before { background:linear-gradient(90deg,transparent,#ef4444,transparent); animation:topF 1.4s infinite; }
+  @keyframes topF { 0%,100%{opacity:.4} 50%{opacity:1} }
+
+  /* per-level accent line color */
+  .card.lv45 { --al:#cfd829; }
+  .card.lv40 { --al:#f47855; }
+  .card.lv35 { --al:#ee3c85; }
+  .card.lv30 { --al:#22c55e; }
+  .card.lv20 { --al:#38bdf8; }
+
+  /* ─── CARD HEADER ─── */
+  .c-hdr {
+    position: relative; z-index: 2;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid rgba(255,255,255,.07);
+    flex-shrink: 0;
+  }
+  .card.leveled .c-hdr { border-bottom-color: rgba(0,0,0,.12); }
+
+  .c-no  { font-family:'Barlow Condensed',sans-serif; font-size:58px; font-weight:900; line-height:1; color:#fff; text-shadow:0 2px 12px rgba(0,0,0,.5); }
+  .c-lbl { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight:700; letter-spacing:.13em; text-transform:uppercase; color:rgba(255,255,255,.4); margin-top:2px; }
+  .card.leveled .c-no  { color:#000; text-shadow:0 2px 8px rgba(0,0,0,.25); }
+  .card.leveled .c-lbl { color:rgba(0,0,0,.45); }
+  .card.expiring .c-no { color:#ef4444 !important; animation:noP 1.4s infinite; }
+  @keyframes noP { 0%,100%{opacity:1} 50%{opacity:.55} }
+
+  /* live dot */
+  .ldot {
+    position: absolute; top:14px; right:16px; z-index:7;
+    width:10px; height:10px; border-radius:50%;
+    background:#22c55e; box-shadow:0 0 7px #22c55e;
+    animation:lp 2s ease-in-out infinite;
+  }
+  .ldot.off { background:#2a3a55; box-shadow:none; animation:none; }
+  @keyframes lp { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.75)} }
+
+  /* ─── MINI COURT SVG ─── */
+  .mc-wrap { display:flex; align-items:center; justify-content:flex-end; flex:1; padding-left:8px; }
+  .mc {
+    width:108px; height:75px;
+    filter:drop-shadow(0 3px 10px rgba(0,0,0,.55));
+    transition:filter .5s;
+    border-radius:3px; overflow:visible;
+  }
+  .card.active .mc  { filter:drop-shadow(0 3px 14px rgba(0,0,0,.4)) drop-shadow(0 0 12px var(--cg,rgba(59,130,246,.4))); }
+  .card.lv45 { --cg:rgba(207,216,41,.55); }
+  .card.lv40 { --cg:rgba(244,120,85,.55); }
+  .card.lv35 { --cg:rgba(109,40,217,.6); }
+  .card.lv30 { --cg:rgba(21,128,61,.6);  }
+  .card.lv20 { --cg:rgba(14,165,233,.6); }
+
+  /* court surface */
+  .cs { transition:fill .6s; }
+  .s-none { fill:#1a3a70; }
+  .s-45   { fill:#cfd829; }
+  .s-40   { fill:#f47855; }
+  .s-35   { fill:#6d28d9; }
+  .s-30   { fill:#15803d; }
+  .s-20   { fill:#0ea5e9; }
+
+  /* ─── CARD BODY ─── */
+  .c-body {
+    position: relative; z-index: 2;
+    flex: 1; display: flex; flex-direction: column;
+    padding: 11px 16px 10px; min-height: 0;
+  }
+
+  .sl { font-size:13px; font-weight:700; letter-spacing:.13em; text-transform:uppercase; margin-bottom:3px; }
+  .sl.sc { color:rgba(255,255,255,.48); }
+  .sl.sn { color:rgba(255,255,255,.42); }
+  .card.leveled .sl.sc { color:rgba(0,0,0,.5); }
+  .card.leveled .sl.sn { color:rgba(0,0,0,.42); }
+
+  .en {
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:24px; font-weight:700; line-height:1.15; color:#fff;
+    overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+    text-shadow:0 1px 6px rgba(0,0,0,.35);
+  }
+  .en.none  { color:rgba(255,255,255,.28); font-style:italic; font-weight:400; font-size:19px; }
+  .card.leveled .en      { color:#000; text-shadow:0 1px 4px rgba(0,0,0,.15); }
+  .card.leveled .en.none { color:rgba(0,0,0,.3); }
+
+  .et { font-size:14px; color:rgba(255,255,255,.48); margin-top:3px; font-weight:500; }
+  .card.leveled .et { color:rgba(0,0,0,.44); }
+
+  /* skill pill */
+  .spill {
+    display:inline-flex; align-items:center;
+    padding:3px 12px; border-radius:20px;
+    font-family:'Barlow Condensed',sans-serif; font-size:16px; font-weight:900; letter-spacing:.07em; text-transform:uppercase;
+    background:rgba(0,0,0,.22); color:#fff; border:1.5px solid rgba(255,255,255,.28);
+    margin-top:5px; align-self:flex-start; flex-shrink:0;
+  }
+  .card.leveled .spill { background:rgba(0,0,0,.18); border-color:rgba(0,0,0,.22); }
+
+  .dv { height:1px; background:rgba(255,255,255,.08); margin:9px 0; flex-shrink:0; }
+  .card.leveled .dv { background:rgba(0,0,0,.12); }
+
+  .nn {
+    font-family:'Barlow Condensed',sans-serif; font-size:19px; font-weight:600;
+    color:rgba(255,255,255,.72); line-height:1.2;
+    overflow:hidden; display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical;
+  }
+  .nn.none { color:rgba(255,255,255,.25); font-style:italic; }
+  .card.leveled .nn      { color:rgba(0,0,0,.55); }
+  .card.leveled .nn.none { color:rgba(0,0,0,.28); }
+  .nt { font-size:13px; color:rgba(255,255,255,.38); margin-top:2px; }
+  .card.leveled .nt { color:rgba(0,0,0,.36); }
+
+  /* countdown bar */
+  .cd-bar {
+    margin-top:auto; padding-top:8px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:space-between;
+    background:rgba(0,0,0,.28); border-radius:10px; padding:8px 14px;
+    border:1px solid rgba(255,255,255,.06);
+  }
+  .card.leveled .cd-bar { background:rgba(0,0,0,.18); border-color:rgba(0,0,0,.1); }
+  .cd-l { font-size:13px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:rgba(255,255,255,.43); }
+  .card.leveled .cd-l { color:rgba(0,0,0,.44); }
+  .cd-v { font-family:'Barlow Condensed',sans-serif; font-size:32px; font-weight:900; color:#fff; line-height:1; }
+  .card.leveled .cd-v { color:#000; }
+  .cd-v.warn    { color:#ef4444 !important; animation:cdf 1s infinite; }
+  .cd-v.expired { color:#ef4444 !important; font-size:22px; }
+  @keyframes cdf { 0%,100%{opacity:1} 50%{opacity:.45} }
+
+</style>
+</head>
+<body>
+
+<div id="header">
+  <div style="display:flex;align-items:center;">
+    <img src="levelup-logo.png" class="hd-logo" onerror="this.style.display='none'" alt="">
+    <div class="hd-div"></div>
+    <div>
+      <div class="hd-name">LevelUp Pickleball</div>
+      <div class="hd-sub">Court Status Board</div>
+    </div>
+  </div>
+  <div style="text-align:center;">
+    <div id="hd-title">All Courts — Live</div>
+    <div id="hd-date"></div>
+  </div>
+  <div id="hd-right">
+    <div id="master-clock">--:-- --</div>
+    <div id="api-row"><div id="api-dot" class="loading"></div><span id="api-txt">Connecting...</span></div>
+    <div id="next-ref"></div>
+  </div>
+</div>
+
+<div id="grid"></div>
+
+<script>
+(function(){
+  var TOTAL=16, TZ="America/New_York";
+  var PROXY="https://courtreserve-proxy.s-jackson.workers.dev/api/day";
+  var API_KEY="", REFRESH=60000, MAX_BO=300000;
+  var EXCLUDE=["Pickleball 101"];
+
+  var delay=REFRESH, timer=null, cacheEv=[], cacheRes=[], cdT={};
+
+  // Layout: top row courts 16→9 (left to right), bottom row 8→1
+  var order=[16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1];
+
+  /* ── BUILD CARDS ── */
+  var grid=document.getElementById("grid");
+  order.forEach(function(n){
+    var d=document.createElement("div");
+    d.className="card empty"; d.id="card-"+n;
+    d.innerHTML=
+      '<div class="flood" id="fl-'+n+'"></div>'+
+      '<div class="ldot off" id="ld-'+n+'"></div>'+
+      '<div class="c-hdr">'+
+        '<div><div class="c-no" id="cn-'+n+'">'+n+'</div><div class="c-lbl">Court</div></div>'+
+        '<div class="mc-wrap">'+
+          '<svg class="mc" id="mc-'+n+'" viewBox="0 0 108 75" xmlns="http://www.w3.org/2000/svg">'+
+            // Court surface
+            '<rect class="cs s-none" id="cs-'+n+'" x="0" y="0" width="108" height="75" rx="3"/>'+
+            // Outer boundary
+            '<rect x="2.5" y="2.5" width="103" height="70" rx="1.5" stroke="rgba(255,255,255,0.8)" stroke-width="2" fill="none"/>'+
+            // Net (center vertical)
+            '<line x1="54" y1="2.5" x2="54" y2="72.5" stroke="rgba(255,255,255,0.95)" stroke-width="2.5"/>'+
+            // Kitchen/NVZ lines left side
+            '<line x1="2.5" y1="24" x2="54" y2="24" stroke="rgba(255,255,255,0.75)" stroke-width="1.5" fill="none"/>'+
+            '<line x1="2.5" y1="51" x2="54" y2="51" stroke="rgba(255,255,255,0.75)" stroke-width="1.5" fill="none"/>'+
+            // Kitchen/NVZ lines right side
+            '<line x1="54" y1="24" x2="105.5" y2="24" stroke="rgba(255,255,255,0.75)" stroke-width="1.5" fill="none"/>'+
+            '<line x1="54" y1="51" x2="105.5" y2="51" stroke="rgba(255,255,255,0.75)" stroke-width="1.5" fill="none"/>'+
+            // Center service line (dashed)
+            '<line x1="54" y1="24" x2="54" y2="51" stroke="rgba(255,255,255,0.5)" stroke-width="1" stroke-dasharray="3,2"/>'+
+            // Sidelines (doubles)
+            '<line x1="13" y1="2.5" x2="13" y2="72.5" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>'+
+            '<line x1="95" y1="2.5" x2="95" y2="72.5" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>'+
+          '</svg>'+
+        '</div>'+
+      '</div>'+
+      '<div class="c-body">'+
+        '<div class="sl sc">In Progress</div>'+
+        '<div class="en none" id="en-'+n+'">No current event</div>'+
+        '<div class="et" id="et-'+n+'"></div>'+
+        '<div id="sp-'+n+'" class="spill" style="display:none;"></div>'+
+        '<div class="dv"></div>'+
+        '<div class="sl sn">Upcoming</div>'+
+        '<div class="nn none" id="nn-'+n+'">No upcoming event</div>'+
+        '<div class="nt" id="nt-'+n+'"></div>'+
+        '<div class="cd-bar"><span class="cd-l" id="cl-'+n+'">Time Left</span><span class="cd-v" id="cv-'+n+'">--</span></div>'+
+      '</div>';
+    grid.appendChild(d);
+  });
+
+  /* ── CLOCK ── */
+  function p2(n){return (n<10?"0":"")+n;}
+  function tickClock(){
+    var d=new Date(),h=d.getHours(),m=d.getMinutes(),s=d.getSeconds(),ap=h>=12?"PM":"AM";
+    h=h%12||12;
+    document.getElementById("master-clock").textContent=p2(h)+":"+p2(m)+":"+p2(s)+" "+ap;
+    var days=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+    var mos=["January","February","March","April","May","June","July","August","September","October","November","December"];
+    document.getElementById("hd-date").textContent=days[d.getDay()]+", "+mos[d.getMonth()]+" "+d.getDate()+", "+d.getFullYear();
+    setTimeout(tickClock,1000-d.getMilliseconds()||100);
+  }
+
+  function toNY(d){
+    try{return d.toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",hour12:true,timeZone:TZ});}
+    catch(e){return d.getHours()+":"+p2(d.getMinutes());}
+  }
+
+  /* ── PARSE ── */
+  function pT(t){
+    if(!t)return null;
+    if(t instanceof Date)return isNaN(t)?null:t;
+    if(typeof t==="number")return new Date(t>1e12?t:t*1000);
+    if(typeof t==="string"){
+      var s=t.trim();if(!s)return null;
+      var m=s.match(/^\/Date\((-?\d+)(?:[+-]\d{4})?\)\/$/i);if(m)return new Date(+m[1]);
+      var d=new Date(s);if(!isNaN(d))return d;
+      var a=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+      if(a){var hr=+a[4],mn=+a[5],ap=(a[6]||"").toUpperCase();if(ap==="PM"&&hr<12)hr+=12;if(ap==="AM"&&hr===12)hr=0;var d2=new Date(+a[3],+a[1]-1,+a[2],hr,mn,0);if(!isNaN(d2))return d2;}
+      var b=s.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/);
+      if(b){var d3=new Date(+b[1],+b[2]-1,+b[3],+b[4],+b[5],+(b[6]||0));if(!isNaN(d3))return d3;}
+    }
+    return null;
+  }
+  function pArr(c){
+    if(!c)return[];if(Array.isArray(c))return c;
+    if(typeof c==="object"){
+      if(Array.isArray(c.Data))return c.Data;if(Array.isArray(c.data))return c.data;
+      if(Array.isArray(c.Items))return c.Items;if(Array.isArray(c.Results))return c.Results;
+    }return[];
+  }
+  function canc(x){
+    if(!x||typeof x!=="object")return false;
+    if(x.IsCanceled||x.IsCancelled||x.Cancelled)return true;
+    if(x.IsActive===false||x.Active===false)return true;
+    var s="";["Status","EventStatus","RegistrationStatus"].forEach(function(k){if(typeof x[k]==="string")s+=" "+x[k];});
+    return s.toLowerCase().indexOf("cancel")>=0;
+  }
+  function excl(name){if(!name)return false;var nl=name.toLowerCase();for(var i=0;i<EXCLUDE.length;i++)if(nl.indexOf(EXCLUDE[i].toLowerCase())>=0)return true;return false;}
+  function ck(k){var s=String(k||"").toLowerCase();return s==="courtnumber"||s==="courtno"||s==="courtid"||s==="court_id"||s==="court_number"||s==="resourceid"||s==="resource_id"||s==="facilitycourtid";}
+  function hasN(rec,n){
+    n=Number(n)||1;if(!rec)return false;
+    var vis=(typeof WeakSet!=="undefined")?new WeakSet():null;
+    function sm(s){if(!s)return false;s=String(s).toLowerCase();if(s.indexOf("court")===-1)return false;
+      if(new RegExp("courts?\\s*#?\\s*"+n+"(?!\\d)","g").test(s))return true;
+      var rg=/courts?\s*#?\s*(\d+)\s*[-–]\s*#?\s*(\d+)/g,m;while((m=rg.exec(s))!==null){var a=+m[1],b=+m[2];if(n>=Math.min(a,b)&&n<=Math.max(a,b))return true;}
+      var lg=/courts?\s*#?\s*(\d+)(?!\d)/g,lm;while((lm=lg.exec(s))!==null)if(+lm[1]===n)return true;return false;}
+    function sc(val,key){if(val==null)return false;var t=typeof val;
+      if(t==="number")return ck(key)&&val===n;if(t==="string")return sm(val);
+      if(Array.isArray(val)){for(var i=0;i<val.length;i++)if(sc(val[i],key))return true;return false;}
+      if(t==="object"){if(vis&&vis.has(val))return false;if(vis)vis.add(val);for(var k in val){if(!Object.prototype.hasOwnProperty.call(val,k))continue;if(sc(val[k],k))return true;}}
+      return false;}
+    return sc(rec,"");
+  }
+  function nEv(x){
+    if(canc(x))return null;
+    var nm=x.EventName||x.Name||x.Title||x.name||x.title||"Event";
+    var s=pT(x.StartDateTime||x.StartTime||x.Start||x.startDateTime||x.start);
+    var e=pT(x.EndDateTime||x.EndTime||x.End||x.endDateTime||x.end);
+    if(!s||!e)return null;return{kind:"event",name:nm,start:s,end:e,raw:x};
+  }
+  function sN(p){var fn=(p.FirstName||p.firstName||"").trim(),ln=(p.LastName||p.lastName||"").trim(),i=fn?fn[0].toUpperCase()+".":"";return(i&&ln)?i+" "+ln:i||ln||"";}
+  function nRes(x){
+    var s=pT(x.StartTime||x.StartDateTime||x.Start||x.startTime||x.start);
+    var e=pT(x.EndTime||x.EndDateTime||x.End||x.endTime||x.end);
+    if(!s||!e)return null;
+    var name="";if(Array.isArray(x.Players)&&x.Players.length){var a=[];x.Players.forEach(function(p){a.push(sN(p||{}));});name=a.join(", ");}
+    if(!name&&x.ReservationTypeName)name=x.ReservationTypeName;if(!name)name="Reserved";
+    return{kind:"res",name:name,start:s,end:e,raw:x};
+  }
+
+  /* ── LEVEL INFO (exact colors from Court_1.html) ── */
+  function lvInfo(title){
+    var tl=(title||"").toLowerCase(), tn=tl.replace(/\s+/g,"").replace(/[–—]/g,"-");
+    if(tn.indexOf("4.5+")>=0||tn.indexOf("4.5-")>=0||tn.indexOf("5.0")>=0||tl.indexOf("advanced")>=0)
+      return{cls:"lv45",fl:"f45",sc:"s-45",label:"4.5+"};
+    if(tn.indexOf("4.0-4.4")>=0||tn.indexOf("4.0-4.49")>=0||tn.indexOf("4.0-4.5")>=0||tn.indexOf("4.0-4")>=0)
+      return{cls:"lv40",fl:"f40",sc:"s-40",label:"4.0–4.49"};
+    if(tn.indexOf("3.5-3.9")>=0||tn.indexOf("3.5-3.99")>=0||tn.indexOf("3.5+")>=0||tl.indexOf("intermediate+")>=0)
+      return{cls:"lv35",fl:"f35",sc:"s-35",label:"3.5–3.99"};
+    if(tn.indexOf("3.0-3.4")>=0||tn.indexOf("3.0-3.49")>=0||tl.indexOf("intermediate")>=0)
+      return{cls:"lv30",fl:"f30",sc:"s-30",label:"3.0–3.49"};
+    if(tn.indexOf("2.0-2.9")>=0||tn.indexOf("2.0-2.99")>=0||tl.indexOf("beginner")>=0)
+      return{cls:"lv20",fl:"f20",sc:"s-20",label:"2.0–2.99"};
+    return null;
+  }
+
+  /* ── COMPUTE COURT ── */
+  function compCourt(n){
+    var ev=[],rs=[],i;
+    for(i=0;i<cacheEv.length;i++){var a=nEv(cacheEv[i]);if(a)ev.push(a);}
+    for(i=0;i<cacheRes.length;i++){var b=nRes(cacheRes[i]);if(b)rs.push(b);}
+    var evC=[],rsC=[],evFB=[];
+    for(i=0;i<ev.length;i++){if(excl(ev[i].name))continue;var rc=ev[i].raw.Courts;if(Array.isArray(rc)&&rc.length===0)evFB.push(ev[i]);else if(hasN(ev[i].raw,n))evC.push(ev[i]);}
+    for(i=0;i<rs.length;i++){if(excl(rs[i].name))continue;if(hasN(rs[i].raw,n))rsC.push(rs[i]);}
+    var pri=rsC.concat(evC).sort(function(a,b){return a.start-b.start;});
+    evFB.sort(function(a,b){return a.start-b.start;});
+    var now=new Date(),cur=null,nxt=null,it,i2;
+    for(i2=0;i2<pri.length;i2++){it=pri[i2];
+      if(now>=it.start&&now<=it.end){if(!cur)cur=it;else if(it.end>cur.end)cur=it;else if(it.end.getTime()===cur.end.getTime()&&it.kind==="res"&&cur.kind==="event")cur=it;}
+      if(!nxt&&now<it.start)nxt=it;}
+    if(!cur)for(i2=0;i2<evFB.length;i2++){it=evFB[i2];if(now>=it.start&&now<=it.end){cur=it;break;}}
+    if(!nxt)for(i2=0;i2<evFB.length;i2++){it=evFB[i2];if(now<it.start){nxt=it;break;}}
+    return{cur:cur,nxt:nxt};
+  }
+
+  /* ── RENDER COURT ── */
+  function renderCourt(n,cur,nxt){
+    var card=document.getElementById("card-"+n);
+    var fl=document.getElementById("fl-"+n);
+    var cs=document.getElementById("cs-"+n);
+    var ld=document.getElementById("ld-"+n);
+    var enEl=document.getElementById("en-"+n);
+    var etEl=document.getElementById("et-"+n);
+    var sp=document.getElementById("sp-"+n);
+    var nnEl=document.getElementById("nn-"+n);
+    var ntEl=document.getElementById("nt-"+n);
+
+    var lv=cur?lvInfo(cur.name):null;
+    var expiring=cur&&(cur.end.getTime()-Date.now()<=60000);
+
+    // card class
+    var cls="card";
+    if(cur){ cls+=expiring?" expiring":" active"; if(lv)cls+=" leveled "+lv.cls; }
+    else cls+=" empty";
+    card.className=cls;
+
+    // flood + surface
+    fl.className="flood"+(lv?" "+lv.fl:"");
+    cs.className="cs"+(lv?" "+lv.sc:" s-none");
+
+    // live dot
+    ld.className=cur?"ldot":"ldot off";
+
+    // current
+    if(cur){ enEl.className="en"; enEl.textContent=cur.name; etEl.textContent=toNY(cur.start)+" – "+toNY(cur.end); }
+    else    { enEl.className="en none"; enEl.textContent="No current event"; etEl.textContent=""; }
+
+    // pill
+    if(lv){ sp.style.display="inline-flex"; sp.textContent=lv.label; }
+    else   { sp.style.display="none"; }
+
+    // next
+    if(nxt){ nnEl.className="nn"; nnEl.textContent=nxt.name; ntEl.textContent=toNY(nxt.start)+" – "+toNY(nxt.end); }
+    else    { nnEl.className="nn none"; nnEl.textContent="No upcoming event"; ntEl.textContent=""; }
+
+    startCD(n,cur,nxt);
+  }
+
+  /* ── COUNTDOWN ── */
+  function startCD(n,cur,nxt){
+    if(cdT[n])clearInterval(cdT[n]);
+    var vEl=document.getElementById("cv-"+n), lEl=document.getElementById("cl-"+n);
+    function tick(){
+      var now=Date.now();
+      if(cur&&now<=cur.end.getTime()){
+        var diff=cur.end.getTime()-now; lEl.textContent="Time Left";
+        if(diff<=60000){vEl.className="cd-v warn";vEl.textContent=Math.ceil(diff/1000)+"s";}
+        else{vEl.className="cd-v";var tm=Math.floor(diff/60000);vEl.textContent=tm>=60?Math.floor(tm/60)+"h "+(tm%60)+"m":tm+"m";}
+      } else if(!cur&&nxt&&now<nxt.start.getTime()){
+        var d2=nxt.start.getTime()-now; lEl.textContent="Starts In"; vEl.className="cd-v";
+        var tm2=Math.floor(d2/60000); vEl.textContent=tm2>=60?Math.floor(tm2/60)+"h "+(tm2%60)+"m":d2<=60000?Math.ceil(d2/1000)+"s":tm2+"m";
+      } else if(cur&&now>cur.end.getTime()){
+        vEl.className="cd-v expired"; vEl.textContent="TIME UP"; lEl.textContent="";
+      } else { vEl.className="cd-v"; vEl.textContent="--"; lEl.textContent="Time Left"; }
+    }
+    tick(); cdT[n]=setInterval(tick,1000);
+  }
+
+  function renderAll(){ for(var n=1;n<=TOTAL;n++){var r=compCourt(n);renderCourt(n,r.cur,r.nxt);} }
+
+  /* ── API ── */
+  function setSt(state,msg){
+    document.getElementById("api-dot").className=state==="ok"?"":state;
+    document.getElementById("api-txt").textContent=msg||"";
+  }
+  function refresh(){
+    setSt("loading","Fetching...");
+    var xhr=new XMLHttpRequest(); xhr.open("GET",PROXY,true); xhr.timeout=10000;
+    if(API_KEY&&API_KEY.trim())xhr.setRequestHeader("X-API-Key",API_KEY.trim());
+    xhr.onreadystatechange=function(){
+      if(xhr.readyState!==4)return;
+      if(xhr.status>=200&&xhr.status<300){
+        try{var d=JSON.parse(xhr.responseText);cacheEv=pArr(d.events);cacheRes=pArr(d.reservations);renderAll();
+          var n=new Date(); setSt("ok","Updated "+p2(n.getHours()%12||12)+":"+p2(n.getMinutes())+":"+p2(n.getSeconds())+(n.getHours()>=12?" PM":" AM"));
+          delay=REFRESH;
+        }catch(e){setSt("error","Parse error");delay=Math.min(delay*2,MAX_BO);}
+      } else {setSt("error",xhr.status===429?"Rate limited":xhr.status===403?"Auth error":"Error "+xhr.status);delay=Math.min(delay*2,MAX_BO);try{renderAll();}catch(e){}}
+      sched();
+    };
+    xhr.ontimeout=function(){setSt("error","Timeout");delay=Math.min(delay*2,MAX_BO);sched();};
+    xhr.onerror  =function(){setSt("error","Network error");delay=Math.min(delay*2,MAX_BO);sched();};
+    xhr.send();
+  }
+  function sched(){
+    if(timer)clearTimeout(timer); timer=setTimeout(refresh,delay);
+    document.getElementById("next-ref").textContent="Next refresh in "+Math.round(delay/1000)+"s";
+  }
+
+  tickClock();
+  refresh();
+})();
+</script>
+</body>
+</html>
