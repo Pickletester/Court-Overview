@@ -9,92 +9,69 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   html, body {
-    width: 3840px;
-    height: 2160px;
+    width: 3840px; height: 2160px;
     overflow: hidden;
     background: #07111e;
     font-family: 'Barlow', sans-serif;
     color: #e8f0fe;
   }
 
-  /* ═══════════════════════════
-     HEADER — 110px
-  ═══════════════════════════ */
+  /* ═══ HEADER 110px ═══ */
   #header {
     position: relative; z-index: 10;
     height: 110px;
     display: flex; align-items: center; justify-content: space-between;
     padding: 0 50px;
-    background: linear-gradient(180deg, rgba(5,12,32,.99) 0%, rgba(7,11,22,.95) 100%);
+    background: linear-gradient(180deg,rgba(5,12,32,.99) 0%,rgba(7,11,22,.95) 100%);
     border-bottom: 2px solid #1e3050;
   }
   #header::after {
     content:""; position:absolute; bottom:-3px; left:50px; right:50px; height:2px;
-    background:linear-gradient(90deg,transparent,#3b82f6,#1d4ed8,#3b82f6,transparent);
-    opacity:.55;
+    background:linear-gradient(90deg,transparent,#3b82f6,#1d4ed8,#3b82f6,transparent); opacity:.55;
   }
-
   .hd-logo { height:62px; filter:drop-shadow(0 0 16px rgba(59,130,246,.55)); }
   .hd-div  { width:2px; height:48px; background:linear-gradient(180deg,transparent,#3b82f6,transparent); opacity:.45; margin:0 22px; }
   .hd-name { font-family:'Barlow Condensed',sans-serif; font-size:36px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; }
   .hd-sub  { font-size:16px; letter-spacing:.2em; text-transform:uppercase; color:#5a7898; margin-top:3px; }
-
   #hd-title { font-family:'Barlow Condensed',sans-serif; font-size:46px; font-weight:900; letter-spacing:.16em; text-transform:uppercase;
     background:linear-gradient(90deg,#60a5fa,#e8f0fe,#60a5fa); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
-  #hd-date  { font-size:18px; color:#5a7898; letter-spacing:.08em; margin-top:4px; text-align:center; }
-
+  #hd-date { font-size:18px; color:#5a7898; letter-spacing:.08em; margin-top:4px; text-align:center; }
   #hd-right { text-align:right; }
   #master-clock { font-family:'Barlow Condensed',sans-serif; font-size:68px; font-weight:900; color:#fff; line-height:1; text-shadow:0 0 30px rgba(59,130,246,.5); }
-  #api-row  { display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-top:4px; }
-  #api-dot  { width:10px; height:10px; border-radius:50%; background:#22c55e; box-shadow:0 0 8px #22c55e; transition:all .4s; }
+  #api-row { display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-top:4px; }
+  #api-dot { width:10px; height:10px; border-radius:50%; background:#22c55e; box-shadow:0 0 8px #22c55e; transition:all .4s; }
   #api-dot.loading { background:#facc15; box-shadow:0 0 8px #facc15; }
   #api-dot.error   { background:#ef4444; box-shadow:0 0 8px #ef4444; }
   #api-txt  { font-size:15px; color:#5a7898; }
   #next-ref { font-size:13px; color:#344f6a; margin-top:2px; }
 
-  /* ═══════════════════════════
-     GRID — 4 cols × 4 rows
-     2160 - 110 header = 2050px remaining
-  ═══════════════════════════ */
+  /* ═══ GRID 4×4 ═══ */
   #grid {
-    width: 3840px;
-    height: 2050px;
+    width: 3840px; height: 2050px;
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    grid-template-rows: repeat(4, 1fr);
-    gap: 10px;
-    padding: 10px;
+    grid-template-columns: repeat(4,1fr);
+    grid-template-rows: repeat(4,1fr);
+    gap: 10px; padding: 10px;
   }
 
-  /* ═══════════════════════════
-     CARD  — horizontal split
-     left: court # + SVG
-     right: event info
-  ═══════════════════════════ */
+  /* ═══ CARD ═══ */
   .card {
-    position: relative;
-    border-radius: 14px; overflow: hidden;
+    position: relative; border-radius: 14px; overflow: hidden;
     display: flex; flex-direction: row;
-    border: 2px solid #182436;
-    background: #0c1828;
-    /* no min-height needed — grid fills everything */
+    border: 2px solid #182436; background: #0c1828;
   }
-
-  /* colour flood */
   .flood { position:absolute; inset:0; z-index:0; opacity:0; transition:opacity .55s; pointer-events:none; }
   .card.leveled .flood { opacity:1; }
-  .f45 { background:linear-gradient(135deg,#8a9400 0%,#cfd829 55%,#dde830); }
-  .f40 { background:linear-gradient(135deg,#b03808 0%,#f47855 55%,#ff8f68); }
-  .f35 { background:linear-gradient(135deg,#3d0c60 0%,#6d28d9 55%,#8640f0); }
-  .f30 { background:linear-gradient(135deg,#064818 0%,#15803d 55%,#1daa50); }
-  .f20 { background:linear-gradient(135deg,#015490 0%,#0ea5e9 55%,#29b8f5); }
+  .f45 { background:linear-gradient(135deg,#8a9400,#cfd829 55%,#dde830); }
+  .f40 { background:linear-gradient(135deg,#b03808,#f47855 55%,#ff8f68); }
+  .f35 { background:linear-gradient(135deg,#3d0c60,#6d28d9 55%,#8640f0); }
+  .f30 { background:linear-gradient(135deg,#064818,#15803d 55%,#1daa50); }
+  .f20 { background:linear-gradient(135deg,#015490,#0ea5e9 55%,#29b8f5); }
 
-  /* state borders */
   .card.active   { border-color:#1e4080; box-shadow:0 0 0 1px rgba(59,130,246,.18); }
   .card.expiring { border-color:rgba(239,68,68,.7); box-shadow:0 0 0 1px rgba(239,68,68,.25); }
   .card.empty    { opacity:.55; }
 
-  /* top accent stripe */
   .card::before {
     content:""; position:absolute; top:0; left:0; right:0; height:5px; z-index:8;
     background:linear-gradient(90deg,transparent,var(--al,#2563eb),transparent); opacity:.75;
@@ -102,31 +79,34 @@
   .card.empty::before    { opacity:.15; }
   .card.expiring::before { background:linear-gradient(90deg,transparent,#ef4444,transparent); animation:topF 1.3s infinite; }
   @keyframes topF { 0%,100%{opacity:.3} 50%{opacity:1} }
-
   .card.lv45{--al:#cfd829;} .card.lv40{--al:#f47855;}
-  .card.lv35{--al:#ee3c85;} .card.lv30{--al:#22c55e;}
-  .card.lv20{--al:#38bdf8;}
+  .card.lv35{--al:#ee3c85;} .card.lv30{--al:#22c55e;} .card.lv20{--al:#38bdf8;}
 
-  /* ── LEFT PANEL ── */
+  /* ═══ LEFT PANEL ═══ */
   .c-left {
     position: relative; z-index: 2;
-    flex: 0 0 220px;
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    gap: 10px;
-    border-right: 1px solid rgba(255,255,255,.07);
-    padding: 12px 10px;
+    flex: 0 0 230px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 10px; border-right: 1px solid rgba(255,255,255,.07); padding: 14px 12px;
   }
   .card.leveled .c-left { border-right-color:rgba(0,0,0,.12); }
 
-  .c-no  { font-family:'Barlow Condensed',sans-serif; font-size:110px; font-weight:900; line-height:.9; color:#fff; text-align:center; text-shadow:0 4px 20px rgba(0,0,0,.5); }
-  .c-lbl { font-family:'Barlow Condensed',sans-serif; font-size:18px; font-weight:700; letter-spacing:.18em; text-transform:uppercase; color:rgba(255,255,255,.35); }
-  .card.leveled .c-no  { color:#000; text-shadow:0 2px 8px rgba(0,0,0,.2); }
-  .card.leveled .c-lbl { color:rgba(0,0,0,.42); }
-  .card.expiring .c-no { color:#ef4444 !important; animation:noP 1.3s infinite; }
+  /* Court number — always white, heavy shadow */
+  .c-no {
+    font-family:'Barlow Condensed',sans-serif;
+    font-size: 122px; font-weight: 900; line-height: .88;
+    color: #fff !important; text-align: center;
+    text-shadow: 0 4px 24px rgba(0,0,0,.95), 0 2px 6px rgba(0,0,0,.9), 0 0 2px #000;
+  }
+  .c-lbl {
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:19px; font-weight:700; letter-spacing:.18em; text-transform:uppercase;
+    color:rgba(255,255,255,.5) !important;
+    text-shadow:0 2px 8px rgba(0,0,0,.7);
+  }
+  .card.expiring .c-no { animation:noP 1.3s infinite; }
   @keyframes noP { 0%,100%{opacity:1} 50%{opacity:.5} }
 
-  /* live dot */
   .ldot {
     position:absolute; top:12px; right:12px; z-index:9;
     width:13px; height:13px; border-radius:50%;
@@ -136,96 +116,83 @@
   .ldot.off { background:#1a2d42; box-shadow:none; animation:none; }
   @keyframes lp { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.3;transform:scale(.7)} }
 
-  /* pickleball court SVG */
   .mc {
     width: 150px; height: 104px;
-    filter: drop-shadow(0 3px 14px rgba(0,0,0,.7));
-    flex-shrink: 0;
-    border-radius: 4px;
-    transition: filter .5s;
+    object-fit: cover;
+    filter: drop-shadow(0 3px 14px rgba(0,0,0,.8));
+    flex-shrink: 0; border-radius: 3px;
   }
-  .card.active .mc { filter:drop-shadow(0 4px 18px rgba(0,0,0,.5)) drop-shadow(0 0 16px var(--cg,rgba(59,130,246,.4))); }
-  .card.lv45{--cg:rgba(207,216,41,.5);} .card.lv40{--cg:rgba(244,120,85,.5);}
-  .card.lv35{--cg:rgba(109,40,217,.55);} .card.lv30{--cg:rgba(21,128,61,.55);}
-  .card.lv20{--cg:rgba(14,165,233,.55);}
 
-  .cs { transition:fill .55s; }
-  .s-none{fill:#102030;} .s-45{fill:#cfd829;} .s-40{fill:#f47855;}
-  .s-35{fill:#6d28d9;}   .s-30{fill:#15803d;} .s-20{fill:#0ea5e9;}
-
-  /* ── RIGHT PANEL ── */
+  /* ═══ RIGHT PANEL ═══ */
   .c-right {
     position: relative; z-index: 2;
     flex: 1; display: flex; flex-direction: column;
-    padding: 16px 20px 14px;
-    min-width: 0;
+    padding: 18px 24px 16px; min-width: 0;
     justify-content: space-between;
   }
 
-  /* current event block */
-  .cur-block { display:flex; flex-direction:column; gap:4px; }
+  .cur-block { display:flex; flex-direction:column; gap:5px; }
+  .nxt-block { display:flex; flex-direction:column; gap:4px; }
 
-  .sec-lbl {
-    font-size:15px; font-weight:700; letter-spacing:.14em; text-transform:uppercase;
-    color:rgba(255,255,255,.4); line-height:1;
+  /* GREEN = In Progress, YELLOW = Upcoming */
+  .lbl-cur {
+    font-size: 19px; font-weight:700; letter-spacing:.14em; text-transform:uppercase;
+    color:#6cff6c; line-height:1;
+    text-shadow: 0 0 8px #6cff6c, 0 0 20px #6cff6c, 0 0 40px #3dff3d;
   }
-  .card.leveled .sec-lbl { color:rgba(0,0,0,.42); }
+  .lbl-nxt {
+    font-size: 19px; font-weight:700; letter-spacing:.14em; text-transform:uppercase;
+    color:#ffe56b; line-height:1;
+    text-shadow: 0 0 8px #ffe56b, 0 0 20px #ffe56b, 0 0 40px #ffc800;
+  }
+  .card.leveled .lbl-cur { color:#004d0f; text-shadow:none; }
+  .card.leveled .lbl-nxt { color:#6b4400; text-shadow:none; }
 
   .ev-name {
     font-family:'Barlow Condensed',sans-serif;
-    font-size:44px; font-weight:800; line-height:1.05; color:#fff;
+    font-size: 54px; font-weight:800; line-height:1.05; color:#fff;
     overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
   }
-  .ev-name.none { color:rgba(255,255,255,.22); font-style:italic; font-weight:600; font-size:34px; }
+  .ev-name.none { color:rgba(255,255,255,.22); font-style:italic; font-weight:600; font-size:40px; }
   .card.leveled .ev-name      { color:#000; }
   .card.leveled .ev-name.none { color:rgba(0,0,0,.25); }
 
-  .ev-time {
-    font-size:22px; font-weight:600; color:rgba(255,255,255,.55); letter-spacing:.02em;
-  }
-  .card.leveled .ev-time { color:rgba(0,0,0,.45); }
+  .ev-time { font-size:26px; font-weight:600; color:rgba(255,255,255,.6); }
+  .card.leveled .ev-time { color:rgba(0,0,0,.48); }
 
-  /* skill pill */
   .spill {
-    display:inline-flex; align-items:center;
-    padding:4px 16px; border-radius:20px;
-    font-family:'Barlow Condensed',sans-serif; font-size:20px; font-weight:900; letter-spacing:.06em; text-transform:uppercase;
-    background:rgba(0,0,0,.25); color:#fff; border:2px solid rgba(255,255,255,.3);
-    align-self:flex-start;
+    display:inline-flex; align-items:center; padding:5px 18px; border-radius:20px;
+    font-family:'Barlow Condensed',sans-serif; font-size:22px; font-weight:900; letter-spacing:.06em; text-transform:uppercase;
+    background:rgba(0,0,0,.25); color:#fff; border:2px solid rgba(255,255,255,.3); align-self:flex-start;
   }
   .card.leveled .spill { background:rgba(0,0,0,.2); border-color:rgba(0,0,0,.2); }
 
-  /* divider */
-  .dv { height:1px; background:rgba(255,255,255,.09); flex-shrink:0; margin:0; }
+  .dv { height:1px; background:rgba(255,255,255,.09); }
   .card.leveled .dv { background:rgba(0,0,0,.12); }
 
-  /* next event block */
-  .nxt-block { display:flex; flex-direction:column; gap:3px; }
-
   .nxt-name {
-    font-family:'Barlow Condensed',sans-serif; font-size:28px; font-weight:700;
-    color:rgba(255,255,255,.6); line-height:1.15;
+    font-family:'Barlow Condensed',sans-serif; font-size:38px; font-weight:700;
+    color:rgba(255,255,255,.80); line-height:1.15;
     overflow:hidden; display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical;
   }
-  .nxt-name.none { color:rgba(255,255,255,.2); font-style:italic; font-weight:500; }
-  .card.leveled .nxt-name      { color:rgba(0,0,0,.5); }
-  .card.leveled .nxt-name.none { color:rgba(0,0,0,.22); }
-  .nxt-time { font-size:18px; color:rgba(255,255,255,.38); font-weight:500; }
-  .card.leveled .nxt-time { color:rgba(0,0,0,.34); }
+  .nxt-name.none { color:rgba(255,255,255,.28); font-style:italic; font-weight:500; }
+  .card.leveled .nxt-name      { color:rgba(0,0,0,.55); }
+  .card.leveled .nxt-name.none { color:rgba(0,0,0,.25); }
+  .nxt-time { font-size:24px; color:rgba(255,255,255,.52); font-weight:500; }
+  .card.leveled .nxt-time { color:rgba(0,0,0,.38); }
 
-  /* countdown bar */
   .cd-bar {
     display:flex; align-items:center; justify-content:space-between;
-    background:rgba(0,0,0,.3); border-radius:10px; padding:10px 18px;
+    background:rgba(0,0,0,.3); border-radius:10px; padding:11px 20px;
     border:1px solid rgba(255,255,255,.06);
   }
   .card.leveled .cd-bar { background:rgba(0,0,0,.2); border-color:rgba(0,0,0,.1); }
-  .cd-lbl { font-size:16px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:rgba(255,255,255,.38); }
-  .card.leveled .cd-lbl { color:rgba(0,0,0,.42); }
-  .cd-val { font-family:'Barlow Condensed',sans-serif; font-size:50px; font-weight:900; color:#fff; line-height:1; }
+  .cd-lbl { font-size:19px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:rgba(255,255,255,.4); }
+  .card.leveled .cd-lbl { color:rgba(0,0,0,.44); }
+  .cd-val { font-family:'Barlow Condensed',sans-serif; font-size:60px; font-weight:900; color:#fff; line-height:1; }
   .card.leveled .cd-val { color:#000; }
   .cd-val.warn    { color:#ef4444 !important; animation:cdf 1s infinite; }
-  .cd-val.expired { color:#ef4444 !important; font-size:34px; }
+  .cd-val.expired { color:#ef4444 !important; font-size:40px; }
   @keyframes cdf { 0%,100%{opacity:1} 50%{opacity:.38} }
 
 </style>
@@ -236,15 +203,9 @@
   <div style="display:flex;align-items:center;">
     <img src="levelup-logo.png" class="hd-logo" onerror="this.style.display='none'" alt="">
     <div class="hd-div"></div>
-    <div>
-      <div class="hd-name">LevelUp Pickleball</div>
-      <div class="hd-sub">Court Status Board</div>
-    </div>
+    <div><div class="hd-name">LevelUp Pickleball</div><div class="hd-sub">Court Status Board</div></div>
   </div>
-  <div style="text-align:center;">
-    <div id="hd-title">All Courts — Live</div>
-    <div id="hd-date"></div>
-  </div>
+  <div style="text-align:center;"><div id="hd-title">All Courts — Live</div><div id="hd-date"></div></div>
   <div id="hd-right">
     <div id="master-clock">--:-- --</div>
     <div id="api-row"><div id="api-dot" class="loading"></div><span id="api-txt">Connecting...</span></div>
@@ -261,9 +222,20 @@
   var API_KEY="", REFRESH=60000, MAX_BO=300000;
   var EXCLUDE=["Pickleball 101"];
   var delay=REFRESH, timer=null, cacheEv=[], cacheRes=[], cdT={};
-
-  /* Row 1: 16 15 14 13 | Row 2: 12 11 10 9 | Row 3: 8 7 6 5 | Row 4: 4 3 2 1 */
   var order=[16,15,14,13, 12,11,10,9, 8,7,6,5, 4,3,2,1];
+
+  /*
+    CLEAN PICKLEBALL COURT SVG — 150×104
+    ─────────────────────────────────────
+    A real pickleball court only has:
+      1. Grey out-of-bounds surround
+      2. Blue playing surface (inset)
+      3. Outer boundary lines (white)
+      4. Net line across the center (white, thicker)
+      5. Two kitchen/NVZ lines parallel to net (white)
+    That's it. No center lines, no sideline dashes.
+  */
+  var COURT_SVG = '<img src="court.jpg" class="mc" alt="court"/>';
 
   /* ── BUILD CARDS ── */
   var grid=document.getElementById("grid");
@@ -276,28 +248,18 @@
       '<div class="c-left">'+
         '<div class="c-no" id="cn-'+n+'">'+n+'</div>'+
         '<div class="c-lbl">Court</div>'+
-        '<svg class="mc" viewBox="0 0 150 104" xmlns="http://www.w3.org/2000/svg">'+
-          '<rect class="cs s-none" id="cs-'+n+'" x="0" y="0" width="150" height="104" rx="4"/>'+
-          '<rect x="3" y="3" width="144" height="98" rx="2" stroke="rgba(255,255,255,.82)" stroke-width="2.5" fill="none"/>'+
-          '<line x1="75" y1="3" x2="75" y2="101" stroke="rgba(255,255,255,.95)" stroke-width="3"/>'+
-          '<line x1="3"  y1="32" x2="75"  y2="32" stroke="rgba(255,255,255,.72)" stroke-width="1.8"/>'+
-          '<line x1="75" y1="32" x2="147" y2="32" stroke="rgba(255,255,255,.72)" stroke-width="1.8"/>'+
-          '<line x1="3"  y1="72" x2="75"  y2="72" stroke="rgba(255,255,255,.72)" stroke-width="1.8"/>'+
-          '<line x1="75" y1="72" x2="147" y2="72" stroke="rgba(255,255,255,.72)" stroke-width="1.8"/>'+
-          '<line x1="18" y1="3"  x2="18"  y2="101" stroke="rgba(255,255,255,.35)" stroke-width="1.2"/>'+
-          '<line x1="132" y1="3" x2="132" y2="101" stroke="rgba(255,255,255,.35)" stroke-width="1.2"/>'+
-        '</svg>'+
+        COURT_SVG+
       '</div>'+
       '<div class="c-right">'+
         '<div class="cur-block">'+
-          '<div class="sec-lbl">In Progress</div>'+
+          '<div class="lbl-cur">In Progress</div>'+
           '<div class="ev-name none" id="en-'+n+'">No current event</div>'+
           '<div class="ev-time" id="et-'+n+'"></div>'+
           '<div id="sp-'+n+'" class="spill" style="display:none;"></div>'+
         '</div>'+
         '<div class="dv"></div>'+
         '<div class="nxt-block">'+
-          '<div class="sec-lbl">Upcoming</div>'+
+          '<div class="lbl-nxt">Upcoming</div>'+
           '<div class="nxt-name none" id="nn-'+n+'">No upcoming event</div>'+
           '<div class="nxt-time" id="nt-'+n+'"></div>'+
         '</div>'+
@@ -356,11 +318,11 @@
 
   function lvInfo(title){
     var tl=(title||"").toLowerCase(),tn=tl.replace(/\s+/g,"").replace(/[–—]/g,"-");
-    if(tn.indexOf("4.5+")>=0||tn.indexOf("4.5-")>=0||tn.indexOf("5.0")>=0||tl.indexOf("advanced")>=0)return{cls:"lv45",fl:"f45",sc:"s-45",label:"4.5+"};
-    if(tn.indexOf("4.0-4.4")>=0||tn.indexOf("4.0-4.49")>=0||tn.indexOf("4.0-4.5")>=0||tn.indexOf("4.0-4")>=0)return{cls:"lv40",fl:"f40",sc:"s-40",label:"4.0–4.49"};
-    if(tn.indexOf("3.5-3.9")>=0||tn.indexOf("3.5-3.99")>=0||tn.indexOf("3.5+")>=0||tl.indexOf("intermediate+")>=0)return{cls:"lv35",fl:"f35",sc:"s-35",label:"3.5–3.99"};
-    if(tn.indexOf("3.0-3.4")>=0||tn.indexOf("3.0-3.49")>=0||tl.indexOf("intermediate")>=0)return{cls:"lv30",fl:"f30",sc:"s-30",label:"3.0–3.49"};
-    if(tn.indexOf("2.0-2.9")>=0||tn.indexOf("2.0-2.99")>=0||tl.indexOf("beginner")>=0)return{cls:"lv20",fl:"f20",sc:"s-20",label:"2.0–2.99"};
+    if(tn.indexOf("4.5+")>=0||tn.indexOf("4.5-")>=0||tn.indexOf("5.0")>=0||tl.indexOf("advanced")>=0)return{cls:"lv45",fl:"f45",label:"4.5+"};
+    if(tn.indexOf("4.0-4.4")>=0||tn.indexOf("4.0-4.49")>=0||tn.indexOf("4.0-4.5")>=0||tn.indexOf("4.0-4")>=0)return{cls:"lv40",fl:"f40",label:"4.0–4.49"};
+    if(tn.indexOf("3.5-3.9")>=0||tn.indexOf("3.5-3.99")>=0||tn.indexOf("3.5+")>=0||tl.indexOf("intermediate+")>=0)return{cls:"lv35",fl:"f35",label:"3.5–3.99"};
+    if(tn.indexOf("3.0-3.4")>=0||tn.indexOf("3.0-3.49")>=0||tl.indexOf("intermediate")>=0)return{cls:"lv30",fl:"f30",label:"3.0–3.49"};
+    if(tn.indexOf("2.0-2.9")>=0||tn.indexOf("2.0-2.99")>=0||tl.indexOf("beginner")>=0)return{cls:"lv20",fl:"f20",label:"2.0–2.99"};
     return null;
   }
 
@@ -385,7 +347,6 @@
   function renderCourt(n,cur,nxt){
     var card=document.getElementById("card-"+n);
     var fl=document.getElementById("fl-"+n);
-    var cs=document.getElementById("cs-"+n);
     var ld=document.getElementById("ld-"+n);
     var enEl=document.getElementById("en-"+n);
     var etEl=document.getElementById("et-"+n);
@@ -394,10 +355,8 @@
     var ntEl=document.getElementById("nt-"+n);
     var lv=cur?lvInfo(cur.name):null;
     var exp=cur&&(cur.end.getTime()-Date.now()<=60000);
-    var cls="card"+(cur?(exp?" expiring":" active")+(lv?" leveled "+lv.cls:""):" empty");
-    card.className=cls;
+    card.className="card"+(cur?(exp?" expiring":" active")+(lv?" leveled "+lv.cls:""):" empty");
     fl.className="flood"+(lv?" "+lv.fl:"");
-    cs.className="cs"+(lv?" "+lv.sc:" s-none");
     ld.className=cur?"ldot":"ldot off";
     if(cur){enEl.className="ev-name";enEl.textContent=cur.name;etEl.textContent=toNY(cur.start)+" – "+toNY(cur.end);}
     else{enEl.className="ev-name none";enEl.textContent="No current event";etEl.textContent="";}
