@@ -1,3 +1,72 @@
+
+Court.jpg
+
+<!DOCTYPE html> <html lang="en"> <head> <meta charset="UTF-8"/> <title>LevelUp Pickleball — All Courts</title> <style> @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@500;600;700&display=swap'); *, *::before, *::after { box-sizing:
+
+pasted
+
+in this code the court.jpg does not show up can you just add a simple ver of it so it does not have to be an image here is the file
+
+9:56 AM
+Looking at your uploaded image, I can see it's a pickleball court photo showing blue playing surfaces with gray out-of-bounds areas. Let me replace the <img> tag with an inline SVG that replicates this look.
+
+
+Check the HTML for the court image reference
+Check the HTML for the court image reference
+I can see it clearly — gray surround, blue playing surfaces, white dividing lines. Here's the replacement SVG. Just swap out the COURT_SVG variable in your code:
+
+javascript
+var COURT_SVG = `<svg class="mc" viewBox="0 0 150 104" xmlns="http://www.w3.org/2000/svg">
+  <!-- Grey out-of-bounds surround -->
+  <rect width="150" height="104" fill="#7a8490"/>
+  <!-- Blue playing surface -->
+  <rect x="12" y="10" width="126" height="84" fill="#2a3a9c"/>
+  <!-- Outer boundary (white) -->
+  <rect x="12" y="10" width="126" height="84" fill="none" stroke="#fff" stroke-width="1.5"/>
+  <!-- Net line (center, thicker) -->
+  <line x1="75" y1="10" x2="75" y2="94" stroke="#fff" stroke-width="2.5"/>
+  <!-- Kitchen/NVZ line - left side -->
+  <line x1="12" y1="38" x2="75" y2="38" stroke="#fff" stroke-width="1.2"/>
+  <!-- Kitchen/NVZ line - right side -->
+  <line x1="75" y1="38" x2="138" y2="38" stroke="#fff" stroke-width="1.2"/>
+  <!-- Kitchen/NVZ line - left side bottom -->
+  <line x1="12" y1="66" x2="75" y2="66" stroke="#fff" stroke-width="1.2"/>
+  <!-- Kitchen/NVZ line - right side bottom -->
+  <line x1="75" y1="66" x2="138" y2="66" stroke="#fff" stroke-width="1.2"/>
+</svg>`;
+This gives you a proper inline SVG with the gray surround, blue courts, white boundary lines, center net line, and kitchen lines on both sides — no external file needed. Just replace the existing var COURT_SVG = ... line with this.
+
+just give me all new code so i can copy and paste
+
+9:56 AM
+
+Created a file, read a file
+Created a file, read a file
+The only change from your original is the COURT_SVG variable — the <img src="court.jpg"> is replaced with an inline SVG that draws the court directly: gray surround, blue playing surface, white boundary lines, thick center net line, and kitchen/NVZ lines on both sides. No external file needed.
+
+Levelup courts
+Code · HTML 
+Court.png
+this looks toalaty diffrent from yours
+
+10:00 AM
+I see — your court image is actually a top-down aerial view showing the full facility: 4 blue courts side by side with a wide gray out-of-bounds area in the center between them, and gray borders all around. Let me redo the SVG to match that exactly.
+
+
+Ran 2 commands
+Ran 2 commands
+Claude's response could not be fully generated
+where is the code part where you made the court?
+
+10:01 AM
+
+
+where is the code part where you made the court?
+
+Claude is AI and can make mistakes. Please double-check responses.
+Levelup courts · HTML
+Copy
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -91,7 +160,6 @@
   }
   .card.leveled .c-left { border-right-color:rgba(0,0,0,.12); }
 
-  /* Court number — always white, heavy shadow */
   .c-no {
     font-family:'Barlow Condensed',sans-serif;
     font-size: 122px; font-weight: 900; line-height: .88;
@@ -118,9 +186,8 @@
 
   .mc {
     width: 150px; height: 104px;
-    object-fit: cover;
-    filter: drop-shadow(0 3px 14px rgba(0,0,0,.8));
     flex-shrink: 0; border-radius: 3px;
+    filter: drop-shadow(0 3px 14px rgba(0,0,0,.8));
   }
 
   /* ═══ RIGHT PANEL ═══ */
@@ -134,7 +201,6 @@
   .cur-block { display:flex; flex-direction:column; gap:5px; }
   .nxt-block { display:flex; flex-direction:column; gap:4px; }
 
-  /* GREEN = In Progress, YELLOW = Upcoming */
   .lbl-cur {
     font-size: 19px; font-weight:700; letter-spacing:.14em; text-transform:uppercase;
     color:#6cff6c; line-height:1;
@@ -224,18 +290,38 @@
   var delay=REFRESH, timer=null, cacheEv=[], cacheRes=[], cdT={};
   var order=[16,15,14,13, 12,11,10,9, 8,7,6,5, 4,3,2,1];
 
-  /*
-    CLEAN PICKLEBALL COURT SVG — 150×104
-    ─────────────────────────────────────
-    A real pickleball court only has:
-      1. Grey out-of-bounds surround
-      2. Blue playing surface (inset)
-      3. Outer boundary lines (white)
-      4. Net line across the center (white, thicker)
-      5. Two kitchen/NVZ lines parallel to net (white)
-    That's it. No center lines, no sideline dashes.
-  */
-  var COURT_SVG = '<img src="court.jpg" class="mc" alt="court"/>';
+  /* Inline SVG pickleball court — matches Court.jpg:
+     grey surround, blue playing surface, white lines, net, kitchen lines */
+  var COURT_SVG =
+  '<svg class="mc" viewBox="0 0 150 104" xmlns="http://www.w3.org/2000/svg">' +
+    /* 1. Dark Grey Background (Overall Surface) */
+    '<rect width="150" height="104" fill="#7a8490"/>' +
+    
+    /* 2. Blue Playing Areas (Left and Right) */
+    /* Left Side Service Boxes */
+    '<rect x="15" y="12" width="40" height="80" fill="#1e2a78"/>' +
+    /* Right Side Service Boxes */
+    '<rect x="95" y="12" width="40" height="80" fill="#1e2a78"/>' +
+    
+    /* 3. White Boundary Lines */
+    /* Outer Perimeter */
+    '<rect x="15" y="12" width="120" height="80" fill="none" stroke="#FFF" stroke-width="1.5"/>' +
+    
+    /* 4. The Kitchen (NVZ) Lines */
+    /* Left Kitchen Line */
+    '<line x1="55" y1="12" x2="55" y2="92" stroke="#FFF" stroke-width="1.5"/>' +
+    /* Right Kitchen Line */
+    '<line x1="95" y1="12" x2="95" y2="92" stroke="#FFF" stroke-width="1.5"/>' +
+    
+    /* 5. Center Service Lines (Horizontal splits) */
+    /* Left split */
+    '<line x1="15" y1="52" x2="55" y2="52" stroke="#FFF" stroke-width="1.5"/>' +
+    /* Right split */
+    '<line x1="95" y1="52" x2="135" y2="52" stroke="#FFF" stroke-width="1.5"/>' +
+    
+    /* 6. The Net (Center Line) */
+    '<line x1="75" y1="10" x2="75" y2="94" stroke="#FFF" stroke-width="2"/>' +
+  '</svg>';
 
   /* ── BUILD CARDS ── */
   var grid=document.getElementById("grid");
@@ -409,3 +495,5 @@
 </script>
 </body>
 </html>
+
+
