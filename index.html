@@ -58,7 +58,11 @@ function csvUrls(input) {
   if (!raw) return [];
   if (/output=csv/.test(raw)) return [raw];
   const pub = raw.match(/\/spreadsheets\/d\/e\/([^/]+)/);
-  if (pub) return [`https://docs.google.com/spreadsheets/d/e/${pub[1]}/pub?single=true&output=csv`];
+  if (pub) {
+    const base = `https://docs.google.com/spreadsheets/d/e/${pub[1]}/pub`;
+    // Fallback order: try raw output, then explicitly request single sheet
+    return [`${base}?output=csv`, `${base}?single=true&output=csv`];
+  }
   const id = raw.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/) || raw.match(/^([a-zA-Z0-9-_]{25,})$/);
   if (!id) return [];
   const gid = (raw.match(/[#&?]gid=(\d+)/) || [])[1];
@@ -72,13 +76,16 @@ function csvUrls(input) {
 function parseWhen(dateStr, timeStr) {
   const d = String(dateStr || '').trim().replace(/^[A-Za-z]+,\s*/, '');
   if (!d) return null;
-  let t = Date.parse(`${d} ${timeStr || ''}`.trim());
+  
+  const year = new Date().getFullYear();
+  // Safely extract just the start time (e.g., "6 PM" from "6 PM to 9 PM")
+  const startTime = String(timeStr || '').split(/to|-/i)[0].trim();
+  
+  let t = Date.parse(`${d} ${year} ${startTime}`);
+  if (isNaN(t)) t = Date.parse(`${d} ${year}`);
+  if (isNaN(t)) t = Date.parse(`${d} ${startTime}`);
   if (isNaN(t)) t = Date.parse(d);
-  if (isNaN(t)) t = Date.parse(`${d} ${new Date().getFullYear()}`);
-  if (isNaN(t)) {
-    const m = d.match(/^(\d{1,2})[/-](\d{1,2})$/);
-    if (m) t = new Date(new Date().getFullYear(), +m[1] - 1, +m[2]).getTime();
-  }
+  
   return isNaN(t) ? null : new Date(t);
 }
 
@@ -115,10 +122,14 @@ class Component extends DCLogic {
       try {
         const res = await fetch(url, { cache: 'no-store' });
         if (!res.ok) continue;
-        const rows = parseCsv(await res.text());
+        const text = await res.text();
+        
+        // Block Google Sign-In HTML pages from wiping out the demo data
+        if (/<!doctype html|<html/i.test(text)) continue;
+        
+        const rows = parseCsv(text);
         if (!rows.length) continue;
-        const head = rows[0].map(v => String(v).toLowerCase());
-        // Updated header check to filter out the row if the first cell is "date"
+        const head = rows[0].map(v => String(v).toLowerCase().trim());
         const body = /date|event|name|title/.test(head[0] || '') ? rows.slice(1) : rows;
         if (body.length) { this.setState({ rows: body, live: true }); return; }
       } catch (e) { /* try next endpoint */ }
@@ -130,7 +141,6 @@ class Component extends DCLogic {
     const limit = Math.max(1, Math.min(8, this.props.eventCount ?? 6));
     return this.state.rows
       .map((r, i) => {
-        // Mapped to match your sheet: Date = r[0], Name = r[1], Time = r[2]
         const when = parseWhen(r[0], r[2]);
         return {
           key: `${r[1]}-${i}`,
