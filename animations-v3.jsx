@@ -232,7 +232,7 @@ function Stage({
         position: 'absolute', inset: 0,
         display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
-        background: '#0a0a0a',
+        background: 'transparent', /* REMOVED #0a0a0a BLACK BACKGROUND */
         fontFamily: 'Inter, system-ui, sans-serif',
         overflow: 'hidden',
       }}
@@ -267,6 +267,10 @@ function Stage({
       </svg>
     </div>
   );
+}
+
+function PlaybackBar() {
+  return null;
 }
 
 function ssParse(raw) {
@@ -683,7 +687,7 @@ function WatercolorReveal(props) {
 Object.assign(window, {
   Easing, interpolate, animate, clamp,
   TimelineContext, useTime, useTimeline,
-  Stage,
+  Stage, PlaybackBar,
   CompositionStage, useComposition, Shot, Captions, WatercolorReveal,
   WatercolorPainting, WatercolorSheet, WatercolorStroke, useWatercolorLayers,
 });
