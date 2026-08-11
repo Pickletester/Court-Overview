@@ -1,5 +1,6 @@
-// animations-v3.jsx — continuous-composition animation engine (Auto-Play / No Scrubbing)
+// @ds-adherence-ignore -- omelette starter scaffold (raw elements/hex/px by design)
 
+// ── Easing functions ────────────────────────────────────────────────────────
 const Easing = {
   linear: (t) => t,
   easeInQuad:    (t) => t * t,
@@ -72,7 +73,7 @@ function animate({ from = 0, to = 1, start = 0, end = 1, ease = Easing.easeInOut
   };
 }
 
-const TimelineContext = React.createContext({ time: 0, duration: 10, playing: true });
+const TimelineContext = React.createContext({ time: 0, duration: 10, playing: false });
 
 const useTime = () => React.useContext(TimelineContext).time;
 const useTimeline = () => React.useContext(TimelineContext);
@@ -158,10 +159,16 @@ function Stage({
   const playTimes = playback && playback.mode === 'times' ? playback.count : null;
   const loopEff = playback ? playback.mode === 'loop' : loop;
 
-  const [time, setTime] = React.useState(0);
-  const [playing, setPlaying] = React.useState(true);
+  const [time, setTime] = React.useState(() => {
+    try {
+      const v = parseFloat(localStorage.getItem(persistKey + ':t') || '0');
+      return isFinite(v) ? clamp(v, 0, duration) : 0;
+    } catch { return 0; }
+  });
+  const [playing, setPlaying] = React.useState(autoplay);
   const [extPlay, setExtPlay] = React.useState(false);
   const extPlayTimerRef = React.useRef(null);
+  const [hoverTime, setHoverTime] = React.useState(null);
   const [scale, setScale] = React.useState(1);
 
   const stageRef = React.useRef(null);
@@ -169,11 +176,15 @@ function Stage({
   const rafRef = React.useRef(null);
   const lastTsRef = React.useRef(null);
 
-  // Auto-scale to fit full viewport height
+  React.useEffect(() => {
+    try { localStorage.setItem(persistKey + ':t', String(time)); } catch {}
+  }, [time, persistKey]);
+
   React.useEffect(() => {
     if (!stageRef.current) return;
     const el = stageRef.current;
     const measure = () => {
+      // Bar height subtraction removed for full viewport scale
       const s = Math.min(
         el.clientWidth / width,
         el.clientHeight / height
@@ -192,7 +203,6 @@ function Stage({
 
   const passesRef = React.useRef(0);
 
-  // Continuous animation loop
   React.useEffect(() => {
     if (!playing) {
       lastTsRef.current = null;
@@ -231,7 +241,6 @@ function Stage({
     };
   }, [playing, duration, loopEff, playTimes]);
 
-  // Video-export and external sync listeners
   React.useEffect(() => {
     const el = canvasRef.current;
     if (!el) return;
@@ -276,13 +285,15 @@ function Stage({
 
   useInlineFontsInto(canvasRef);
 
+  const displayTime = hoverTime != null ? hoverTime : time;
+
   const ctxValue = React.useMemo(
     () => ({
-      time, duration, playing,
+      time: displayTime, duration, playing,
       extPlaying: extPlay,
       setTime, setPlaying,
     }),
-    [time, duration, playing, extPlay]
+    [displayTime, duration, playing, extPlay]
   );
 
   return (
@@ -292,45 +303,55 @@ function Stage({
       style={{
         position: 'absolute', inset: 0,
         display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center',
+        alignItems: 'center',
         background: '#0a0a0a',
         fontFamily: 'Inter, system-ui, sans-serif',
-        overflow: 'hidden',
       }}
     >
-      <svg
-        ref={canvasRef}
-        width={width} height={height}
-        data-om-exportable-video-with-duration-secs={duration}
-        style={{
-          transform: `scale(${scale})`,
-          transformOrigin: 'center',
-          flexShrink: 0,
-          boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
-          display: 'block',
-        }}
-      >
-        <foreignObject x="0" y="0" width="100%" height="100%">
-          <div
-            xmlns="http://www.w3.org/1999/xhtml"
-            style={{
-              width, height,
-              background,
-              position: 'relative',
-              overflow: 'hidden',
-            }}
-          >
-            <TimelineContext.Provider value={ctxValue}>
-              {children}
-            </TimelineContext.Provider>
-          </div>
-        </foreignObject>
-      </svg>
+      <div style={{
+        flex: 1,
+        width: '100%',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        overflow: 'hidden',
+        minHeight: 0,
+      }}>
+        <svg
+          ref={canvasRef}
+          width={width} height={height}
+          data-om-exportable-video-with-duration-secs={duration}
+          style={{
+            transform: `scale(${scale})`,
+            transformOrigin: 'center',
+            flexShrink: 0,
+            boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
+            display: 'block',
+          }}
+        >
+          <foreignObject x="0" y="0" width="100%" height="100%">
+            <div
+              xmlns="http://www.w3.org/1999/xhtml"
+              style={{
+                width, height,
+                background,
+                position: 'relative',
+                overflow: 'hidden',
+              }}
+            >
+              <TimelineContext.Provider value={ctxValue}>
+                {children}
+              </TimelineContext.Provider>
+            </div>
+          </foreignObject>
+        </svg>
+      </div>
     </div>
   );
 }
 
-// ── Scene Parsing & Synchronization ──────────────────────────────────────────
+// Dummy playback bar prevents missing reference crashes in export
+function PlaybackBar() {
+  return null;
+}
 
 function ssParse(raw) {
   if (typeof raw !== 'string' || !raw || raw.length > 16 * 1024) return null;
@@ -407,8 +428,6 @@ function SceneSync(props) {
   }, [raw, onUpdate]);
   return <div ref={ref} style={{ display: 'none' }} />;
 }
-
-// ── Continuous Composition Core ─────────────────────────────────────────────
 
 var CompositionContext = React.createContext(null);
 function useComposition() {
@@ -490,9 +509,9 @@ function CompositionClock(props) {
       time: tl.time,
       duration: tl.duration,
       authoredTotal: d.authoredTotal,
-      playing: true,
+      playing: tl.playing || tl.extPlaying === true,
     };
-  }, [T, props.cues, tl.time, tl.duration, d]);
+  }, [T, props.cues, tl.time, tl.duration, d, tl.playing, tl.extPlaying]);
   return (
     <CompositionContext.Provider value={value}>
       {props.children}
@@ -549,6 +568,8 @@ function CompositionStage(props) {
   var width = +props.width || 1280;
   var height = +props.height || 720;
   var bg = props.bg || '#0b0b0e';
+  var autoplay = props.autoplay == null ? true : String(props.autoplay) !== 'false';
+  var loop = props.loop == null ? true : String(props.loop) !== 'false';
   var state = React.useState(props.scenes);
   var raw = state[0];
   var setRaw = state[1];
@@ -586,7 +607,7 @@ function CompositionStage(props) {
   return (
     <React.Fragment>
       <Stage width={width} height={height} duration={derived.total} background={bg}
-             autoplay={true} loop={true} playback={pb}>
+             autoplay={autoplay} loop={loop} playback={pb}>
         <SceneSync raw={raw} onUpdate={setRaw} />
         {typeof praw === 'string' && praw !== '' && (
           <PlaybackSync raw={praw} onUpdate={setPraw} />
@@ -596,11 +617,23 @@ function CompositionStage(props) {
         </CompositionClock>
         <CcUnknownWatch unknownRef={unknownRef} badge={badge} setBadge={setBadge} />
       </Stage>
+      {badge !== '' && (
+        <div
+          data-om-unknown-cues
+          style={{
+            position: 'absolute', left: 12, bottom: 56, zIndex: 10,
+            padding: '6px 10px', borderRadius: 6,
+            background: 'rgba(0,0,0,0.72)', color: '#e8906a',
+            font: '500 12px Inter, system-ui, sans-serif',
+            pointerEvents: 'none',
+          }}
+        >
+          choreography references unknown section{badge.indexOf(',') >= 0 ? 's' : ''}: {badge}
+        </div>
+      )}
     </React.Fragment>
   );
 }
-
-// ── Watercolor Helpers ───────────────────────────────────────────────────────
 
 var WC_PIXEL_CAP = 11000000;
 
@@ -759,7 +792,7 @@ function WatercolorReveal(props) {
 Object.assign(window, {
   Easing, interpolate, animate, clamp,
   TimelineContext, useTime, useTimeline,
-  Stage,
+  Stage, PlaybackBar,
   CompositionStage, useComposition, Shot, Captions, WatercolorReveal,
   WatercolorPainting, WatercolorSheet, WatercolorStroke, useWatercolorLayers,
 });
