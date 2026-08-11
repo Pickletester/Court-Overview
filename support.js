@@ -1,704 +1,366 @@
-// @ds-adherence-ignore -- omelette starter scaffold (raw elements/hex/px by design)
+/* LevelUp Pickleball — upcoming events board (10s seamless loop, 1920x1080). */
+const { CompositionStage, useComposition, animate, Easing, clamp } = window;
 
-// ── Easing functions ────────────────────────────────────────────────────────
-const Easing = {
-  linear: (t) => t,
-  easeInQuad:    (t) => t * t,
-  easeOutQuad:   (t) => t * (2 - t),
-  easeInOutQuad: (t) => (t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t),
-  easeInCubic:    (t) => t * t * t,
-  easeOutCubic:   (t) => (--t) * t * t + 1,
-  easeInOutCubic: (t) => (t < 0.5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1),
-  easeInQuart:    (t) => t * t * t * t,
-  easeOutQuart:   (t) => 1 - (--t) * t * t * t,
-  easeInOutQuart: (t) => (t < 0.5 ? 8 * t * t * t * t : 1 - 8 * (--t) * t * t * t),
-  easeInExpo:  (t) => (t === 0 ? 0 : Math.pow(2, 10 * (t - 1))),
-  easeOutExpo: (t) => (t === 1 ? 1 : 1 - Math.pow(2, -10 * t)),
-  easeInOutExpo: (t) => {
-    if (t === 0) return 0;
-    if (t === 1) return 1;
-    if (t < 0.5) return 0.5 * Math.pow(2, 20 * t - 10);
-    return 1 - 0.5 * Math.pow(2, -20 * t + 10);
-  },
-  easeInSine:    (t) => 1 - Math.cos((t * Math.PI) / 2),
-  easeOutSine:   (t) => Math.sin((t * Math.PI) / 2),
-  easeInOutSine: (t) => -(Math.cos(Math.PI * t) - 1) / 2,
-  easeOutBack: (t) => {
-    const c1 = 1.70158, c3 = c1 + 1;
-    return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
-  },
-  easeInBack: (t) => {
-    const c1 = 1.70158, c3 = c1 + 1;
-    return c3 * t * t * t - c1 * t * t;
-  },
-  easeInOutBack: (t) => {
-    const c1 = 1.70158, c2 = c1 * 1.525;
-    return t < 0.5
-      ? (Math.pow(2 * t, 2) * ((c2 + 1) * 2 * t - c2)) / 2
-      : (Math.pow(2 * t - 2, 2) * ((c2 + 1) * (t * 2 - 2) + c2) + 2) / 2;
-  },
-  easeOutElastic: (t) => {
-    const c4 = (2 * Math.PI) / 3;
-    if (t === 0) return 0;
-    if (t === 1) return 1;
-    return Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * c4) + 1;
-  },
+const NAVY = '#0A2540';
+const BLUE = '#0E4FD8';
+const BLUE_SOFT = '#E6EDFF';
+const GREEN = '#4CB74B';
+const GREEN_SOFT = '#E8F7E6';
+const INK = '#0A1B2A';
+
+const DISPLAY = "'Bricolage Grotesque', system-ui, sans-serif";
+const NUM = "'Barlow Condensed', system-ui, sans-serif";
+
+const MOTION = {
+  enter: (from, to, start, end) => animate({ from, to, start, end, ease: Easing.easeOutCubic }),
+  pop: (from, to, start, end) => animate({ from, to, start, end, ease: Easing.easeOutBack }),
+  drift: (from, to, start, end) => animate({ from, to, start, end, ease: Easing.easeInOutSine }),
 };
 
-const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+const mix = (a, b, t) => a + (b - a) * t;
 
-function interpolate(input, output, ease = Easing.linear) {
-  return (t) => {
-    if (t <= input[0]) return output[0];
-    if (t >= input[input.length - 1]) return output[output.length - 1];
-    for (let i = 0; i < input.length - 1; i++) {
-      if (t >= input[i] && t <= input[i + 1]) {
-        const span = input[i + 1] - input[i];
-        const local = span === 0 ? 0 : (t - input[i]) / span;
-        const easeFn = Array.isArray(ease) ? (ease[i] || Easing.linear) : ease;
-        const eased = easeFn(local);
-        return output[i] + (output[i + 1] - output[i]) * eased;
-      }
-    }
-    return output[output.length - 1];
-  };
-}
-
-function animate({ from = 0, to = 1, start = 0, end = 1, ease = Easing.easeInOutCubic }) {
-  return (t) => {
-    if (t <= start) return from;
-    if (t >= end) return to;
-    const local = (t - start) / (end - start);
-    return from + (to - from) * ease(local);
-  };
-}
-
-const TimelineContext = React.createContext({ time: 0, duration: 10, playing: true });
-
-const useTime = () => React.useContext(TimelineContext).time;
-const useTimeline = () => React.useContext(TimelineContext);
-
-function useInlineFontsInto(svgRef) {
-  React.useEffect(() => {
-    const svg = svgRef.current;
-    const host = svg && svg.querySelector('foreignObject > div');
-    if (!svg || !host) return;
-    let cancelled = false;
-    (async () => {
-      const rules = [];
-      for (const ss of document.styleSheets) {
-        let cssRules;
-        try { cssRules = ss.cssRules; } catch {
-          if (ss.href) {
-            try {
-              const txt = await fetch(ss.href).then(r => { if (!r.ok) throw 0; return r.text(); });
-              for (const ff of (txt.match(/@font-face\s*{[^}]*}/g) || []))
-                rules.push({ css: ff, base: ss.href });
-            } catch {}
-          }
-          continue;
-        }
-        if (!cssRules) continue;
-        for (const r of cssRules) {
-          if (r.type === CSSRule.FONT_FACE_RULE) {
-            rules.push({ css: r.cssText, base: ss.href || location.href });
-          }
-        }
-      }
-      const toDataURL = (url) => fetch(url)
-        .then(r => { if (!r.ok) throw 0; return r.blob(); })
-        .then(b => new Promise(res => {
-          const fr = new FileReader();
-          fr.onload = () => res(fr.result);
-          fr.onerror = () => res(url);
-          fr.readAsDataURL(b);
-        }))
-        .catch(() => url);
-      const parts = await Promise.all(rules.map(async ({ css, base }) => {
-        const re = /url\((['"]?)([^'")]+)\1\)/g;
-        let out = css, m;
-        while ((m = re.exec(css))) {
-          const u = m[2];
-          if (u.startsWith('data:')) continue;
-          let abs; try { abs = new URL(u, base).href; } catch { continue; }
-          out = out.split(m[0]).join(`url("${await toDataURL(abs)}")`);
-        }
-        return out;
-      }));
-      if (cancelled || !parts.length) {
-        svg.setAttribute('data-om-fonts-inlined', 'true');
-        return;
-      }
-      const style = document.createElement('style');
-      style.textContent = parts.join('\n');
-      host.insertBefore(style, host.firstChild);
-      svg.setAttribute('data-om-fonts-inlined', 'true');
-    })();
-    return () => { cancelled = true; };
-  }, []);
-}
-
-function Stage({
-  width = 1280,
-  height = 720,
-  duration = 10,
-  background = '#f6f4ef',
-  fps = 60,
-  loop = true,
-  autoplay = true,
-  playback = null,
-  persistKey = 'animstage-v3',
-  children,
-}) {
-  width = +width || 1280; height = +height || 720;
-  duration = +duration || 10; fps = +fps || 60;
-  
-  const playTimes = playback && playback.mode === 'times' ? playback.count : null;
-  const loopEff = playback ? playback.mode === 'loop' : true;
-
-  // Hardcoded to auto-play and ignore local storage caching
-  const [time, setTime] = React.useState(0);
-  const [playing, setPlaying] = React.useState(true);
-  const [scale, setScale] = React.useState(1);
-
-  const stageRef = React.useRef(null);
-  const canvasRef = React.useRef(null);
-  const rafRef = React.useRef(null);
-  const lastTsRef = React.useRef(null);
-
-  // Auto-scale to fit full viewport height
-  React.useEffect(() => {
-    if (!stageRef.current) return;
-    const el = stageRef.current;
-    const measure = () => {
-      const s = Math.min(
-        el.clientWidth / width,
-        el.clientHeight / height
-      );
-      setScale(Math.max(0.05, s));
-    };
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    window.addEventListener('resize', measure);
-    return () => {
-      ro.disconnect();
-      window.removeEventListener('resize', measure);
-    };
-  }, [width, height]);
-
-  const passesRef = React.useRef(0);
-
-  // Continuous animation loop (immune to pausing)
-  React.useEffect(() => {
-    passesRef.current = 0;
-    const step = (ts) => {
-      if (lastTsRef.current == null) lastTsRef.current = ts;
-      const dt = (ts - lastTsRef.current) / 1000;
-      lastTsRef.current = ts;
-      setTime((t) => {
-        let next = t + dt;
-        if (next >= duration) {
-          if (playTimes !== null) {
-            passesRef.current += 1;
-            if (passesRef.current >= playTimes) {
-              next = duration;
-            } else {
-              next = next % duration;
-            }
-          } else if (loopEff) {
-            next = next % duration;
-          } else {
-            next = duration;
-          }
-        }
-        return next;
-      });
-      rafRef.current = requestAnimationFrame(step);
-    };
-    rafRef.current = requestAnimationFrame(step);
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      lastTsRef.current = null;
-    };
-  }, [duration, loopEff, playTimes]);
-
-  useInlineFontsInto(canvasRef);
-
-  const ctxValue = React.useMemo(
-    () => ({
-      time, duration, playing: true,
-      extPlaying: false,
-      setTime, setPlaying,
-    }),
-    [time, duration]
-  );
-
+function EventCard({ ev, isNext, width, lift, vis }) {
+  const y = mix(150, 0, vis) - 18 * lift;
+  const scale = 1 + 0.035 * lift;
   return (
-    <div
-      ref={stageRef}
-      data-om-starter="animations-v3"
-      style={{
-        position: 'absolute', inset: 0,
-        display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center',
-        background: '#0a0a0a',
-        fontFamily: 'Inter, system-ui, sans-serif',
-        overflow: 'hidden',
-      }}
-    >
-      <svg
-        ref={canvasRef}
-        width={width} height={height}
-        data-om-exportable-video-with-duration-secs={duration}
-        style={{
-          transform: `scale(${scale})`,
-          transformOrigin: 'center',
-          flexShrink: 0,
-          boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
-          display: 'block',
-        }}
-      >
-        <foreignObject x="0" y="0" width="100%" height="100%">
-          <div
-            xmlns="http://www.w3.org/1999/xhtml"
-            style={{
-              width, height,
-              background,
-              position: 'relative',
-              overflow: 'hidden',
-            }}
-          >
-            <TimelineContext.Provider value={ctxValue}>
-              {children}
-            </TimelineContext.Provider>
-          </div>
-        </foreignObject>
-      </svg>
-    </div>
-  );
-}
-
-// Dummy component to prevent reference crashes
-function PlaybackBar() {
-  return null;
-}
-
-function ssParse(raw) {
-  if (typeof raw !== 'string' || !raw || raw.length > 16 * 1024) return null;
-  var parsed;
-  try { parsed = JSON.parse(raw); } catch (e) { return null; }
-  if (!Array.isArray(parsed) || parsed.length === 0 || parsed.length > 50) return null;
-  for (var i = 0; i < parsed.length; i++) {
-    var s = parsed[i];
-    if (typeof s !== 'object' || s === null) return null;
-    if (typeof s.name !== 'string' || typeof s.dur !== 'number') return null;
-    if (!isFinite(s.dur) || s.dur <= 0 || s.dur > 300) return null;
-  }
-  return parsed;
-}
-
-function ppParse(raw) {
-  if (typeof raw !== 'string' || !raw || raw.length > 256) return null;
-  var parsed;
-  try { parsed = JSON.parse(raw); } catch (e) { return null; }
-  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return null;
-  var keys = Object.keys(parsed);
-  if (parsed.mode === 'loop') return keys.length === 1 ? { mode: 'loop' } : null;
-  if (parsed.mode === 'times') {
-    if (keys.length !== 2) return null;
-    var c = parsed.count;
-    if (typeof c !== 'number' || c !== Math.floor(c) || c < 1 || c > 99) return null;
-    return { mode: 'times', count: c };
-  }
-  return null;
-}
-
-function PlaybackSync(props) {
-  var ref = React.useRef(null);
-  var raw = props.raw;
-  var onUpdate = props.onUpdate;
-  React.useEffect(function () {
-    var el = ref.current;
-    if (!el) return;
-    var root = el.closest('[data-om-exportable-video-with-duration-secs]');
-    if (!root) return;
-    root.setAttribute('data-om-timeline-playback', raw);
-    var onEvent = function (e) {
-      var next = e && e.detail;
-      if (ppParse(next)) onUpdate(next);
-    };
-    root.addEventListener('data-om-timeline-playback-update', onEvent);
-    return function () {
-      root.removeEventListener('data-om-timeline-playback-update', onEvent);
-      root.removeAttribute('data-om-timeline-playback');
-    };
-  }, [raw, onUpdate]);
-  return <div ref={ref} style={{ display: 'none' }} />;
-}
-
-function SceneSync(props) {
-  var ref = React.useRef(null);
-  var raw = props.raw;
-  var onUpdate = props.onUpdate;
-  React.useEffect(function () {
-    var el = ref.current;
-    if (!el) return;
-    var root = el.closest('[data-om-exportable-video-with-duration-secs]');
-    if (!root) return;
-    root.setAttribute('data-om-timeline-scenes', raw);
-    var onEvent = function (e) {
-      var next = e && e.detail;
-      if (ssParse(next)) onUpdate(next);
-    };
-    root.addEventListener('data-om-timeline-scenes-update', onEvent);
-    return function () {
-      root.removeEventListener('data-om-timeline-scenes-update', onEvent);
-      root.removeAttribute('data-om-timeline-scenes');
-    };
-  }, [raw, onUpdate]);
-  return <div ref={ref} style={{ display: 'none' }} />;
-}
-
-var CompositionContext = React.createContext(null);
-function useComposition() {
-  var ctx = React.useContext(CompositionContext);
-  if (!ctx) throw new Error('useComposition() must be called inside <CompositionStage>');
-  return ctx;
-}
-
-function ccDerive(scenes) {
-  var playStart = 0;
-  var authStart = 0;
-  var sections = [];
-  var table = Object.create(null);
-  for (var i = 0; i < scenes.length; i++) {
-    var s = scenes[i];
-    var nat = typeof s.nat === 'number' && isFinite(s.nat) && s.nat > 0 ? s.nat : s.dur;
-    sections.push({ name: s.name, playStart: playStart, dur: s.dur, authStart: authStart, nat: nat });
-    if (!Object.prototype.hasOwnProperty.call(table, s.name)) {
-      table[s.name] = Math.round(authStart * 1000) / 1000;
-    }
-    playStart += s.dur;
-    authStart += nat;
-  }
-  return {
-    sections: sections,
-    table: table,
-    total: Math.round(playStart * 1000) / 1000,
-    authoredTotal: Math.round(authStart * 1000) / 1000,
-  };
-}
-
-function ccWarp(d, t) {
-  var ss = d.sections;
-  if (ss.length === 0) return 0;
-  var idx = ss.length - 1;
-  for (var i = 0; i < ss.length; i++) {
-    if (t < ss[i].playStart + ss[i].dur) { idx = i; break; }
-  }
-  var s = ss[idx];
-  var local = Math.min(Math.max(t - s.playStart, 0), s.dur);
-  var T = s.authStart + (s.dur > 0 ? local * (s.nat / s.dur) : 0);
-  return Math.min(T, d.authoredTotal);
-}
-
-var CC_META = Object.assign(Object.create(null), {
-  toString: 1, toLocaleString: 1, valueOf: 1, toJSON: 1, then: 1,
-  constructor: 1, hasOwnProperty: 1, isPrototypeOf: 1,
-  propertyIsEnumerable: 1, default: 1,
-});
-function ccCueProxy(table, unknownRef) {
-  if (typeof Proxy !== 'function') return table;
-  return new Proxy(table, {
-    get: function (target, prop) {
-      if (typeof prop !== 'string' || prop in target) return target[prop];
-      if (CC_META[prop] || prop.indexOf('@@') === 0) return Object.prototype[prop];
-      unknownRef.current[prop] = true;
-      return NaN;
-    },
-  });
-}
-
-function CcUnknownWatch(props) {
-  var tl = useTimeline();
-  React.useEffect(function () {
-    var next = Object.keys(props.unknownRef.current).sort().join(', ');
-    if (next !== props.badge) props.setBadge(next);
-  }, [tl.time]);
-  return null;
-}
-
-function CompositionClock(props) {
-  var tl = useTimeline();
-  var d = props.derived;
-  var T = ccWarp(d, tl.time);
-  var value = React.useMemo(function () {
-    return {
-      T: T,
-      CUES: props.cues,
-      time: tl.time,
-      duration: tl.duration,
-      authoredTotal: d.authoredTotal,
-      playing: true,
-    };
-  }, [T, props.cues, tl.time, tl.duration, d]);
-  return (
-    <CompositionContext.Provider value={value}>
-      {props.children}
-    </CompositionContext.Provider>
-  );
-}
-
-function Shot(props) {
-  var c = useComposition();
-  var from = +props.from;
-  var to = props.to == null ? Infinity : +props.to;
-  var on = isFinite(from) && c.T >= from && c.T < to;
-  return (
-    <div style={{ position: 'absolute', inset: 0, visibility: on ? 'visible' : 'hidden' }}>
-      {props.children}
-    </div>
-  );
-}
-
-var CAPTION_FADE = 0.18;
-function Captions(props) {
-  var c = useComposition();
-  var t = c.T;
-  var items = (props.items || [])
-    .filter(function (it) { return it && isFinite(+it.at); })
-    .sort(function (a, b) { return a.at - b.at; });
-  var active = null;
-  var end = Infinity;
-  for (var i = 0; i < items.length; i++) {
-    if (t < items[i].at) break;
-    active = items[i];
-    end = typeof active.until === 'number' && isFinite(active.until)
-      ? active.until
-      : (i + 1 < items.length ? items[i + 1].at : Infinity);
-  }
-  if (!active || t >= end) return null;
-  var o = Math.min(1, (t - active.at) / CAPTION_FADE);
-  if (isFinite(end)) o = Math.min(o, (end - t) / CAPTION_FADE);
-  o = Math.max(0, Math.min(1, o));
-  return (
-    <div
-      data-om-caption
-      style={Object.assign({
-        position: 'absolute', left: '8%', right: '8%', bottom: '7%',
-        textAlign: 'center', opacity: o, pointerEvents: 'none',
-        font: '500 30px Inter, system-ui, sans-serif', color: '#f6f4ef',
-        textShadow: '0 1px 14px rgba(0,0,0,0.45)',
-      }, props.style)}
-    >{active.text}</div>
-  );
-}
-
-function CompositionStage(props) {
-  var width = +props.width || 1280;
-  var height = +props.height || 720;
-  var bg = props.bg || '#0b0b0e';
-  var autoplay = true;
-  var loop = true;
-  var state = React.useState(props.scenes);
-  var raw = state[0];
-  var setRaw = state[1];
-  var scenes = React.useMemo(function () { return ssParse(raw); }, [raw]);
-  var pstate = React.useState(props.playback);
-  var praw = pstate[0];
-  var setPraw = pstate[1];
-  var pb = React.useMemo(function () { return ppParse(praw); }, [praw]);
-  var unknownRef = React.useRef({});
-  var badgeState = React.useState('');
-  var badge = badgeState[0];
-  var setBadge = badgeState[1];
-  var derived = React.useMemo(function () {
-    unknownRef.current = {};
-    return scenes ? ccDerive(scenes) : null;
-  }, [scenes]);
-  var cues = React.useMemo(function () {
-    return derived ? ccCueProxy(derived.table, unknownRef) : null;
-  }, [derived]);
-  React.useEffect(function () {
-    var next = Object.keys(unknownRef.current).sort().join(', ');
-    if (next !== badge) setBadge(next);
-  });
-  if (!scenes) {
-    return (
+    <div style={{
+      width, flex: '0 0 auto', boxSizing: 'border-box', borderRadius: 30, background: '#ffffff',
+      overflow: 'hidden', border: `4px solid ${isNext ? GREEN : BLUE_SOFT}`,
+      boxShadow: `0 ${18 + 26 * lift}px ${34 + 40 * lift}px rgba(10,37,64,${0.10 + 0.12 * lift})`,
+      transform: `translateY(${y}px) scale(${scale})`, transformOrigin: '50% 100%',
+      opacity: vis, display: 'flex', flexDirection: 'column',
+    }}>
       <div style={{
-        position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
-        justifyContent: 'center', background: '#0b0b0e', color: '#c96442',
-        font: '500 16px Inter, system-ui, sans-serif', textAlign: 'center',
+        background: isNext ? GREEN : BLUE, color: '#ffffff', padding: '14px 0 16px', textAlign: 'center',
       }}>
-        animations-v3: the scenes prop isn't a valid JSON scene list
+        <div style={{ height: 26, marginBottom: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {isNext ? (
+            <div style={{
+              background: '#ffffff', color: GREEN, fontFamily: DISPLAY, fontWeight: 800, fontSize: 17,
+              letterSpacing: '0.12em', padding: '5px 12px', borderRadius: 999, textTransform: 'uppercase',
+            }}>Next up</div>
+          ) : null}
+        </div>
+        <div style={{
+          fontFamily: DISPLAY, fontWeight: 800, fontSize: 30, letterSpacing: '0.14em',
+          textTransform: 'uppercase', opacity: 0.9,
+        }}>{ev.weekday}</div>
+        <div style={{ fontFamily: NUM, fontWeight: 700, fontSize: 92, lineHeight: 0.9, letterSpacing: '-0.02em' }}>
+          {ev.day}
+        </div>
+        <div style={{
+          fontFamily: DISPLAY, fontWeight: 700, fontSize: 23, letterSpacing: '0.2em',
+          textTransform: 'uppercase', opacity: 0.85, marginTop: 4,
+        }}>{ev.month}</div>
       </div>
-    );
-  }
-  return (
-    <React.Fragment>
-      <Stage width={width} height={height} duration={derived.total} background={bg}
-             autoplay={autoplay} loop={loop} playback={pb}>
-        <SceneSync raw={raw} onUpdate={setRaw} />
-        {typeof praw === 'string' && praw !== '' && (
-          <PlaybackSync raw={praw} onUpdate={setPraw} />
-        )}
-        <CompositionClock derived={derived} cues={cues}>
-          {props.children}
-        </CompositionClock>
-        <CcUnknownWatch unknownRef={unknownRef} badge={badge} setBadge={setBadge} />
-      </Stage>
-    </React.Fragment>
+      <div style={{
+        flex: 1, padding: '20px 22px 22px', display: 'flex', flexDirection: 'column',
+        justifyContent: 'space-between', gap: 14, minHeight: 0,
+      }}>
+        <div style={{
+          fontFamily: DISPLAY, fontWeight: 800, fontSize: 36, lineHeight: 1.04,
+          color: INK, textWrap: 'pretty', letterSpacing: '-0.01em',
+        }}>{ev.name}</div>
+        {ev.time ? (
+          <div style={{
+            alignSelf: 'flex-start', background: isNext ? GREEN_SOFT : BLUE_SOFT,
+            color: isNext ? '#2E7D2C' : BLUE, borderRadius: 14, padding: '8px 14px',
+            fontFamily: NUM, fontWeight: 700, fontSize: 36, letterSpacing: '0.02em',
+          }}>{ev.time}</div>
+        ) : null}
+      </div>
+    </div>
   );
 }
 
-var WC_PIXEL_CAP = 11000000;
+function Piece(props) {
+  const { T, CUES, authoredTotal } = useComposition();
+  const events = props.events || [];
+  const n = Math.max(events.length, 1);
+  const gap = 24;
+  const cardW = Math.min(300, Math.floor((1920 - 96 - gap * (n - 1)) / n));
 
-function wcLayerOpts(props) {
-  var w = +props.width || 900, h = +props.height || 1200;
-  var askScale = +props.scale || 1;
-  return { width: w, height: h, scale: Math.min(askScale, Math.sqrt(WC_PIXEL_CAP / (w * h))), seed: props.seed == null ? undefined : +props.seed, quality: props.quality == null ? undefined : +props.quality };
-}
+  const R = CUES.Reveal, C = CUES.Close;
+  const HEADER = 196;
 
-function useWatercolorLayers(painting, opts) {
-  var kit = window.WatercolorKit;
-  if (typeof painting !== 'function' || !kit || typeof kit.layers !== 'function') return null;
-  try {
-    return kit.layers(painting, wcLayerOpts(opts || {}));
-  } catch (e) {
-    return null;
+  // panel: 1 = navy fills the screen (splash), 0 = collapsed to the header band
+  let panel;
+  if (T < R) panel = 1;
+  else if (T < R + 1.0) panel = MOTION.drift(1, 0, R, R + 1.0)(T);
+  else if (T < C) panel = 0;
+  else panel = MOTION.drift(0, 1, C, authoredTotal)(T);
+
+  const panelH = mix(HEADER, 1080, panel);
+
+  // logo pose interpolates between its header slot and the splash centre
+  const logoH = mix(96, 250, panel);
+  const logoW = logoH * (2704 / 988);
+  const logoX = mix(56, 960 - logoW / 2, panel);
+  const logoY = mix((HEADER - 96) / 2, 372, panel);
+
+  const fadeOut = (start, end) => (T > start ? MOTION.drift(1, 0, start, end)(T) : 1);
+  const HIT = 0.6;
+  const logoIn = clamp(MOTION.pop(0, 1, HIT, 1.5)(T) * fadeOut(C + 0.45, authoredTotal), 0, 1);
+  const hideSplash = fadeOut(R - 0.5, R + 0.05);
+  const splashText = MOTION.enter(0, 1, 1.4, 2.1)(T) * hideSplash;
+  const underline = MOTION.enter(0, 1, 1.7, 2.5)(T) * hideSplash;
+  const ring1 = MOTION.enter(0, 1, HIT, 1.6)(T);
+  const ring2 = MOTION.enter(0, 1, HIT + 0.12, 1.8)(T);
+  const rays = MOTION.enter(0, 1, HIT, 1.05)(T);
+  const burst = T >= HIT ? 1 : 0;
+  const shake = T > HIT && T < HIT + 0.5 ? (1 - (T - HIT) / 0.5) * Math.sin((T - HIT) * 78) * 9 : 0;
+  const bars = [0, 1, 2].map(i => MOTION.enter(0, 1, HIT + 0.05 + i * 0.12, HIT + 1.05 + i * 0.12)(T) * fadeOut(C + 0.1, authoredTotal));
+  const court = MOTION.enter(0, 1, 0.1, 1.3)(T) * fadeOut(C, authoredTotal);
+  const push = T < R ? MOTION.drift(0, 1, 2.0, R)(T) : fadeOut(C + 0.2, authoredTotal);
+  const ballAX = animate({ from: -320, to: 900, start: 0, end: HIT, ease: Easing.easeInQuad });
+  const ballAY = animate({ from: -300, to: 452, start: 0, end: HIT, ease: Easing.easeInQuad });
+  const ballBX = animate({ from: 900, to: 2260, start: HIT, end: 1.5, ease: Easing.easeOutQuad });
+  const ballBY = animate({ from: 452, to: 1340, start: HIT, end: 1.5, ease: Easing.easeOutQuad });
+  const ballPose = (t) => (t <= HIT
+    ? { x: ballAX(t), y: ballAY(t) }
+    : { x: ballBX(t), y: ballBY(t) });
+  const ballVis = (T < 1.5 ? 1 : 0) * panel;
+
+  const headIn = MOTION.enter(0, 1, R + 0.3, R + 1.0)(T);
+  const headOut = T > C - 0.2 ? MOTION.drift(1, 0, C - 0.2, C + 0.35)(T) : 1;
+  const head = headIn * headOut;
+  const ruleW = MOTION.enter(0, 1, R + 0.6, R + 1.9)(T) * headOut;
+
+  const footIn = MOTION.pop(0, 1, R + 1.05, R + 1.85)(T);
+  const footOut = T > C - 0.1 ? MOTION.drift(1, 0, C - 0.1, C + 0.4)(T) : 1;
+  const foot = clamp(footIn * footOut, 0, 1);
+
+  const sweep = (CUES.Board || 3.4) + 0.2;
+  const qrPulse = (1 + Math.sin(((T - R) / 1.8) * Math.PI * 2 - Math.PI / 2)) / 2;
+  const showQr = props.showQr !== false;
+
+  const blobX = Math.sin((T / authoredTotal) * Math.PI * 2) * 90;
+  const blobY = Math.cos((T / authoredTotal) * Math.PI * 2) * 40;
+
+  function pulseAt(at) {
+    const half = 0.5;
+    if (T < at - half || T > at + half) return 0;
+    if (T <= at) return MOTION.pop(0, 1, at - half, at)(T);
+    return MOTION.drift(1, 0, at, at + half)(T);
   }
-}
+  function lift(i) {
+    return Math.max(pulseAt(sweep + i * 0.5), pulseAt(sweep + 5.0 + i * 0.5));
+  }
 
-var WatercolorSheetContext = React.createContext(null);
-
-function WatercolorSheet(props) {
-  var L = props.layers || null;
-  var style = Object.assign({
-    position: 'relative', display: 'block', width: '100%',
-    aspectRatio: L ? L.width + ' / ' + L.height : '3 / 4',
-    isolation: 'isolate', overflow: 'hidden',
-  }, props.style);
-  if (!L) return null;
   return (
-    <WatercolorSheetContext.Provider value={L}>
-      <div style={style} data-om-watercolor-sheet>
-        <img src={L.paper} alt={props.alt || ''} style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', display: 'block' }} />
-        {props.children}
+    <div style={{
+      position: 'absolute', inset: 0, background: '#ffffff', overflow: 'hidden',
+      fontFamily: DISPLAY, color: INK,
+    }}>
+      <div style={{
+        position: 'absolute', width: 900, height: 900, borderRadius: '50%', left: 120, top: 340,
+        background: GREEN, opacity: 0.10, filter: 'blur(6px)',
+        transform: `translate(${blobX}px, ${blobY}px)`,
+      }} />
+      <div style={{
+        position: 'absolute', width: 700, height: 700, borderRadius: '50%', right: -120, top: 420,
+        background: BLUE, opacity: 0.08,
+        transform: `translate(${-blobX}px, ${-blobY}px)`,
+      }} />
+
+      {/* headline */}
+      <div style={{
+        position: 'absolute', left: 0, right: 0, top: HEADER, padding: '38px 56px 0', zIndex: 4,
+        opacity: head, transform: `translateY(${mix(26, 0, head)}px)`,
+      }}>
+        <div style={{
+          fontFamily: DISPLAY, fontWeight: 800, fontSize: 70, lineHeight: 1,
+          letterSpacing: '-0.02em', textTransform: 'uppercase',
+        }}>
+          Upcoming <span style={{ color: GREEN }}>Events</span>
+        </div>
+        <div style={{
+          height: 9, borderRadius: 999, background: BLUE, marginTop: 14,
+          width: `${ruleW * 100}%`, maxWidth: 1808,
+        }} />
       </div>
-    </WatercolorSheetContext.Provider>
+
+      {/* cards */}
+      <div style={{
+        position: 'absolute', left: 0, right: 0, top: 392, display: 'flex', gap,
+        padding: '0 48px', alignItems: 'stretch', height: 462, zIndex: 4,
+      }}>
+        {events.map((ev, i) => (
+          <EventCard
+            key={ev.key || i}
+            ev={ev}
+            width={cardW}
+            isNext={i === 0}
+            lift={lift(i)}
+            vis={clamp(MOTION.enter(0, 1, R + 0.45 + i * 0.1, R + 1.3 + i * 0.1)(T)
+              * (T > C - 0.15 ? MOTION.drift(1, 0, C - 0.15, C + 0.5)(T) : 1), 0, 1)}
+          />
+        ))}
+        {events.length === 0 ? (
+          <div style={{
+            fontFamily: DISPLAY, fontWeight: 700, fontSize: 44, color: '#8494A6',
+            display: 'flex', alignItems: 'center', opacity: head,
+          }}>Loading events…</div>
+        ) : null}
+      </div>
+
+      {/* footer */}
+      <div style={{
+        position: 'absolute', left: 48, right: 48, bottom: 40, height: 172,
+        display: 'flex', gap: 24, zIndex: 4,
+        opacity: foot, transform: `translateY(${mix(60, 0, foot)}px)`,
+      }}>
+        <div style={{
+          flex: 1, background: GREEN, borderRadius: 30, padding: '0 44px',
+          display: 'flex', flexDirection: 'column', justifyContent: 'center', color: '#ffffff',
+        }}>
+          <div style={{
+            fontFamily: DISPLAY, fontWeight: 800, fontSize: 52, letterSpacing: '-0.01em',
+            textTransform: 'uppercase', lineHeight: 1.05,
+          }}>{props.ctaTitle}</div>
+          <div style={{
+            fontFamily: DISPLAY, fontWeight: 600, fontSize: 26, letterSpacing: '0.14em',
+            opacity: 0.92, marginTop: 8, textTransform: 'uppercase',
+          }}>{props.ctaSub}</div>
+        </div>
+        {showQr ? (
+          <div style={{
+            width: 172, boxSizing: 'border-box', borderRadius: 30, background: '#ffffff',
+            border: `4px solid ${NAVY}`, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transform: `scale(${1 + 0.03 * qrPulse})`,
+            boxShadow: `0 ${14 + 14 * qrPulse}px ${28 + 22 * qrPulse}px rgba(10,37,64,0.16)`,
+          }}>
+            <img src="./signup-qr.png" alt="Scan to sign up" style={{ width: 126, height: 126, display: 'block' }} />
+          </div>
+        ) : null}
+      </div>
+
+      {/* navy panel — full-bleed splash that collapses into the header band */}
+      <div style={{
+        position: 'absolute', left: 0, top: 0, width: 1920, height: panelH,
+        background: NAVY, zIndex: 5, overflow: 'hidden',
+      }}>
+        <div style={{
+          position: 'absolute', left: 0, top: 0, width: 1920, height: 1080,
+          transform: `translate(${shake}px, ${shake * 0.5}px) scale(${mix(1, 1.05, push * panel)})`, transformOrigin: '50% 46%',
+        }}>
+          <svg width="1920" height="1080" style={{
+            position: 'absolute', left: 0, top: 0, opacity: 0.14 * panel * court,
+          }}>
+            <g stroke="#ffffff" strokeWidth="4" fill="none">
+              <rect x="330" y="150" width="1260" height="790" rx="4" />
+              <line x1="330" y1="545" x2="1590" y2="545" />
+              <line x1="960" y1="150" x2="960" y2="410" />
+              <line x1="960" y1="680" x2="960" y2="940" />
+              <line x1="330" y1="410" x2="1590" y2="410" />
+              <line x1="330" y1="680" x2="1590" y2="680" />
+            </g>
+          </svg>
+          {[{ p: ring1, c: GREEN, max: 1180, w: 8 }, { p: ring2, c: BLUE, max: 860, w: 5 }].map((r, i) => (
+            <div key={i} style={{
+              position: 'absolute', left: 960, top: 498,
+              width: mix(110, r.max, r.p), height: mix(110, r.max, r.p),
+              marginLeft: -mix(55, r.max / 2, r.p), marginTop: -mix(55, r.max / 2, r.p),
+              borderRadius: '50%', border: `${r.w}px solid ${r.c}`,
+              opacity: (1 - r.p) * 0.75 * panel * burst,
+            }} />
+          ))}
+          <div style={{
+            position: 'absolute', left: 960, top: 498, width: 0, height: 0,
+            opacity: (1 - rays) * 0.9 * panel * burst,
+          }}>
+            {[20, 68, 112, 160, 200, 248, 292, 340].map((a, i) => (
+              <div key={i} style={{
+                position: 'absolute', left: -3, top: 0, width: 9, height: mix(70, 300, rays),
+                background: i % 2 ? BLUE : GREEN, borderRadius: 999,
+                transform: `rotate(${a}deg) translateY(${mix(60, 150, rays)}px)`,
+                transformOrigin: '50% 0%',
+              }} />
+            ))}
+          </div>
+          {[0, 1].map((g) => {
+            const pose = ballPose(T - g * 0.045);
+            const d = 96 - g * 8;
+            return (
+              <div key={g} style={{
+                position: 'absolute', left: pose.x - d / 2, top: pose.y - d / 2, width: d, height: d,
+                borderRadius: '50%', background: GREEN,
+                opacity: ballVis * (g === 0 ? 1 : 0.2),
+                boxShadow: g === 0 ? '0 0 0 5px rgba(255,255,255,0.28)' : 'none',
+              }}>
+                {g === 0 ? (
+                  <svg width={d} height={d} viewBox="0 0 96 96">
+                    {[[30, 27], [64, 25], [48, 48], [27, 62], [67, 60], [46, 78], [78, 43], [20, 43]].map((c, i) => (
+                      <circle key={i} cx={c[0]} cy={c[1]} r="6" fill="#ffffff" fillOpacity="0.92" />
+                    ))}
+                  </svg>
+                ) : null}
+              </div>
+            );
+          })}
+          {[{ t: 214, h: 26, c: GREEN, d: -1 }, { t: 858, h: 16, c: BLUE, d: 1 }, { t: 908, h: 8, c: GREEN, d: 1 }].map((b, i) => (
+            <div key={i} style={{
+              position: 'absolute', left: 0, top: b.t, width: 1920, height: b.h, background: b.c,
+              transform: `translateX(${mix(2200 * b.d, 0, bars[i])}px) rotate(-9deg)`,
+              opacity: 0.92 * panel,
+            }} />
+          ))}
+          <div style={{ position: 'absolute', left: 0, right: 0, top: 656, textAlign: 'center' }}>
+            <div style={{
+              fontFamily: DISPLAY, fontWeight: 800, fontSize: 62, letterSpacing: '0.24em',
+              color: GREEN, textTransform: 'uppercase', opacity: splashText * panel,
+              transform: `translateY(${mix(34, 0, splashText)}px)`,
+            }}>Upcoming Events</div>
+            <div style={{
+              height: 8, borderRadius: 999, background: '#ffffff', margin: '26px auto 0',
+              width: mix(0, 520, underline), opacity: 0.85 * underline * panel,
+            }} />
+          </div>
+        </div>
+      </div>
+
+      <img
+        src="./levelup-logo.png"
+        alt="LevelUp Pickleball"
+        style={{
+          position: 'absolute', left: logoX, top: logoY, height: logoH, width: 'auto',
+          display: 'block', zIndex: 6, opacity: mix(1, logoIn, panel),
+          transform: `translateY(${mix(0, mix(38, 0, logoIn), panel)}px) scale(${mix(1, mix(0.74, 1, logoIn) * mix(1, 1.05, push), panel)}) rotate(${mix(0, mix(-4, 0, logoIn), panel)}deg)`,
+          transformOrigin: '50% 50%',
+        }}
+      />
+
+      {props.showClock === false ? null : (
+        <div style={{
+          position: 'absolute', right: 56, top: 44, textAlign: 'right', color: '#ffffff',
+          zIndex: 6, opacity: 1 - panel,
+        }}>
+          <div style={{
+            fontFamily: DISPLAY, fontWeight: 700, fontSize: 22, letterSpacing: '0.24em',
+            opacity: 0.6, textTransform: 'uppercase',
+          }}>{props.dateLine}</div>
+          <div style={{ fontFamily: NUM, fontWeight: 700, fontSize: 72, lineHeight: 1, letterSpacing: '0.01em' }}>
+            {props.clock}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
-function WatercolorStroke(props) {
-  var fromSheet = React.useContext(WatercolorSheetContext);
-  var L = props.layers || fromSheet;
-  if (!L) return null;
-  var i = +props.index;
-  if (!(i >= 0) || i >= L.count) return null;
-  var at = props.at == null ? 1 : clamp(+props.at, 0, 1);
-  if (!(at > 0)) return null;
-  var box, src;
-  try {
-    box = L.box(i);
-    src = box ? L.src(i, at) : null;
-  } catch (e) { return null; }
-  if (!box || !src) return null;
-  var style = Object.assign({
-    position: 'absolute', display: 'block',
-    left: box.x * 100 + '%', top: box.y * 100 + '%',
-    width: box.w * 100 + '%', height: box.h * 100 + '%',
-    mixBlendMode: L.kind(i) === 'reserve' ? 'normal' : 'multiply',
-    pointerEvents: 'none',
-  }, props.style);
-  return <img src={src} alt="" data-om-watercolor-stroke={i} data-om-stroke-kind={L.kind(i)} style={style} />;
+function EventsBoardStage(props) {
+  return (
+    <CompositionStage
+      width={1920}
+      height={1080}
+      scenes={window.OM_SCENES}
+      playback={window.OM_PLAYBACK}
+      bg="#ffffff"
+    >
+      <Piece {...props} />
+    </CompositionStage>
+  );
 }
 
-function WatercolorPainting(props) {
-  var c = useComposition();
-  var from = +props.from || 0;
-  var to = props.to == null ? from + 6 : +props.to;
-  var u = clamp((c.T - from) / Math.max(to - from, 0.001), 0, 1);
-  var eased = Easing.easeInOutQuad(u);
-  var L = useWatercolorLayers(props.painting, props);
-  var tick = React.useState(0)[1];
-  var warmed = React.useRef(null);
-  React.useEffect(function () {
-    if (!L || typeof L.warm !== 'function') return;
-    var p = L.warm();
-    if (warmed.current === p) return;
-    var live = true;
-    p.then(function () { warmed.current = p; if (live) tick(function (x) { return x + 1; }); });
-    return function () { live = false; };
-  }, [L && L.paper, props.painting]);
-  var strokes = [];
-  if (L) {
-    for (var i = 0; i < L.count; i++) {
-      var sp = L.span(i);
-      var at = clamp((eased - sp.from) / Math.max(sp.to - sp.from, 1e-6), 0, 1);
-      if (at <= 0) break;
-      strokes.push(<WatercolorStroke key={i} layers={L} index={i} at={at} />);
-    }
-  }
-  return <WatercolorSheet layers={L} style={props.style} alt={props.alt}>{strokes}</WatercolorSheet>;
-}
-
-function WatercolorReveal(props) {
-  var c = useComposition();
-  var from = +props.from || 0;
-  var to = props.to == null ? from + 6 : +props.to;
-  var u = clamp((c.T - from) / Math.max(to - from, 0.001), 0, 1);
-  var style = Object.assign({ display: 'block', width: '100%', height: '100%', objectFit: 'contain' }, props.style);
-  var frames = Array.isArray(props.frames) && props.frames.length ? props.frames : null;
-  var steps = frames ? frames.length - 1 : Math.max(1, Math.round(+props.steps || 36));
-  var i = Math.min(steps, Math.round(Easing.easeInOutQuad(u) * steps));
-  var painting = typeof props.painting === 'function' ? props.painting : null;
-  var kit = window.WatercolorKit;
-  var w = +props.width || 900, h = +props.height || 1200;
-  var askScale = +props.scale || Math.min(2, window.devicePixelRatio || 1);
-  var opts = {
-    width: w, height: h,
-    scale: Math.min(askScale, Math.sqrt(11000000 / (w * h))),
-    seed: props.seed == null ? undefined : +props.seed, steps: steps,
-    type: props.format || 'image/jpeg', quality: props.quality == null ? 0.88 : +props.quality,
-  };
-  var key = opts.width + 'x' + opts.height + '#' + opts.seed + '@' + opts.scale + '/' + steps + ':' + opts.type + '/' + opts.quality;
-  var cache = React.useRef({ fn: null, key: '', frames: {}, baking: false }).current;
-  var tick = React.useState(0)[1];
-  if ((cache.fn !== painting && String(cache.fn) !== String(painting)) || cache.key !== key) {
-    cache.key = key;
-    cache.frames = {};
-    cache.baking = false;
-  }
-  cache.fn = painting;
-  React.useEffect(function () {
-    if (frames || cache.baking || !painting || !kit || typeof kit.bake !== 'function') return;
-    cache.baking = true;
-    var target = cache.frames;
-    try {
-      kit.bake(painting, opts, function (n, _t, url) {
-        target[n] = url;
-      }).then(function (all) {
-        if (cache.frames !== target) return;
-        for (var n = 0; n < all.length; n++) target[n] = all[n];
-        tick(function (x) { return x + 1; });
-      }).catch(function () {});
-    } catch (e) {}
-  });
-  if (frames) return <img src={frames[i]} alt={props.alt || ''} style={style} />;
-  if (!kit || !painting) return null;
-  if (!cache.frames[i]) {
-    try {
-      cache.frames[i] = kit.frame(painting, Object.assign({}, opts, { at: i / steps }));
-    } catch (e) { return null; }
-  }
-  return <img src={cache.frames[i]} alt={props.alt || ''} style={style} />;
-}
-
-Object.assign(window, {
-  Easing, interpolate, animate, clamp,
-  TimelineContext, useTime, useTimeline,
-  Stage, PlaybackBar,
-  CompositionStage, useComposition, Shot, Captions, WatercolorReveal,
-  WatercolorPainting, WatercolorSheet, WatercolorStroke, useWatercolorLayers,
-});
+window.EventsBoardStage = EventsBoardStage;
+module.exports = { EventsBoardStage };
