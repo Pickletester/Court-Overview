@@ -23,14 +23,14 @@
 <x-import component-from-global-scope="EventsBoardStage" from="./animations-v3.jsx ./events-board.jsx" events="{{ events }}" clock="{{ clock }}" date-line="{{ dateLine }}" cta-title="{{ ctaTitle }}" cta-sub="{{ ctaSub }}" show-clock="{{ showClock }}" show-qr="{{ showQr }}" hint-size="100%,100%"></x-import>
 
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;sheetUrl&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;https://docs.google.com/spreadsheets/d/1MNmj-wpnZY4hyLq2wcK7dIHRFqzjHiGUXSi-nmh5C1M/edit?gid=0#gid=0&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Live data&quot;},&quot;eventCount&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:6,&quot;min&quot;:3,&quot;max&quot;:8,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Live data&quot;},&quot;ctaTitle&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Scan for more info&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Sign-up&quot;},&quot;ctaSub&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Spots go fast — grab yours at the front desk&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Sign-up&quot;},&quot;showQr&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Sign-up&quot;},&quot;showClock&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Display&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;sheetUrl&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;https://docs.google.com/spreadsheets/d/e/2PACX-1vQNSp80KWdyuFcDjjrgXsvBVXsP1BlivcEdF4i2T51BIfV4VL_kmYl-YOfybRUpffdf6E9lYNn32aXh/pubhtml&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Live data&quot;},&quot;eventCount&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:6,&quot;min&quot;:3,&quot;max&quot;:8,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Live data&quot;},&quot;ctaTitle&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Scan for more info&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Sign-up&quot;},&quot;ctaSub&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Spots go fast — grab yours at the front desk&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Sign-up&quot;},&quot;showQr&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Sign-up&quot;},&quot;showClock&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Display&quot;}}">
 const DEMO = [
-  ['Friday Night Round Robin', '2026-08-14', '6:30 PM'],
-  ['Beginner Clinic 2.0-3.0', '2026-08-15', '9:00 AM'],
-  ['Saturday Open Play', '2026-08-15', '1:00 PM'],
-  ['DUPR Doubles League', '2026-08-17', '7:00 PM'],
-  ['Junior Academy', '2026-08-19', '4:30 PM'],
-  ['LevelUp Summer Shootout', '2026-08-22', '8:00 AM'],
+  ['2026-08-14', 'Friday Night Round Robin', '6:30 PM'],
+  ['2026-08-15', 'Beginner Clinic 2.0-3.0', '9:00 AM'],
+  ['2026-08-15', 'Saturday Open Play', '1:00 PM'],
+  ['2026-08-17', 'DUPR Doubles League', '7:00 PM'],
+  ['2026-08-19', 'Junior Academy', '4:30 PM'],
+  ['2026-08-22', 'LevelUp Summer Shootout', '8:00 AM'],
 ];
 
 const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
@@ -118,7 +118,8 @@ class Component extends DCLogic {
         const rows = parseCsv(await res.text());
         if (!rows.length) continue;
         const head = rows[0].map(v => String(v).toLowerCase());
-        const body = /event|name|title/.test(head[0] || '') ? rows.slice(1) : rows;
+        // Updated header check to filter out the row if the first cell is "date"
+        const body = /date|event|name|title/.test(head[0] || '') ? rows.slice(1) : rows;
         if (body.length) { this.setState({ rows: body, live: true }); return; }
       } catch (e) { /* try next endpoint */ }
     }
@@ -129,10 +130,11 @@ class Component extends DCLogic {
     const limit = Math.max(1, Math.min(8, this.props.eventCount ?? 6));
     return this.state.rows
       .map((r, i) => {
-        const when = parseWhen(r[1], r[2]);
+        // Mapped to match your sheet: Date = r[0], Name = r[1], Time = r[2]
+        const when = parseWhen(r[0], r[2]);
         return {
-          key: `${r[0]}-${i}`,
-          name: String(r[0] || '').trim(),
+          key: `${r[1]}-${i}`,
+          name: String(r[1] || '').trim(),
           time: fmtTime(r[2], when),
           when,
         };
@@ -166,7 +168,6 @@ class Component extends DCLogic {
     };
   }
 }
-
 </script>
 </body>
 </html>
