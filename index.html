@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=1920, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin: 0; padding: 0; background: #0A2540; }
+  a { color: #0E4FD8; }
+  a:hover { color: #4CB74B; }
+</style>
+<script>window.OM_SCENES = '[{"name":"Splash","dur":1.5,"desc":"Navy splash: court lines fade up, a pickleball streaks in and slams the centre, ring and ray bursts fire with a camera shake as the logo pops in, bars sweep across and UPCOMING EVENTS rises under a white underline","nat":3.2},{"name":"Reveal","dur":1.4,"desc":"The navy panel collapses into the header band, the logo flies to its header slot and the headline, cards and sign-up bar rise in"},{"name":"Board","dur":9.2,"desc":"The board holds nine seconds while a lift travels left to right across the event cards and the QR code pulses"},{"name":"Close","dur":1.2,"desc":"Cards and footer drop away and the navy panel expands back to the splash, matching the first frame"}]';</script>
+<script>window.OM_PLAYBACK = '{"mode":"loop"}';</script>
+</helmet>
+<x-import component-from-global-scope="EventsBoardStage" from="./animations-v3.jsx ./events-board.jsx" events="{{ events }}" clock="{{ clock }}" date-line="{{ dateLine }}" cta-title="{{ ctaTitle }}" cta-sub="{{ ctaSub }}" show-clock="{{ showClock }}" show-qr="{{ showQr }}" hint-size="100%,100%"></x-import>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;sheetUrl&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;https://docs.google.com/spreadsheets/d/1MNmj-wpnZY4hyLq2wcK7dIHRFqzjHiGUXSi-nmh5C1M/edit?gid=0#gid=0&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Live data&quot;},&quot;eventCount&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:6,&quot;min&quot;:3,&quot;max&quot;:8,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Live data&quot;},&quot;ctaTitle&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Scan for more info&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Sign-up&quot;},&quot;ctaSub&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Spots go fast — grab yours at the front desk&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Sign-up&quot;},&quot;showQr&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Sign-up&quot;},&quot;showClock&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Display&quot;}}">
+const DEMO = [
+  ['Friday Night Round Robin', '2026-08-14', '6:30 PM'],
+  ['Beginner Clinic 2.0-3.0', '2026-08-15', '9:00 AM'],
+  ['Saturday Open Play', '2026-08-15', '1:00 PM'],
+  ['DUPR Doubles League', '2026-08-17', '7:00 PM'],
+  ['Junior Academy', '2026-08-19', '4:30 PM'],
+  ['LevelUp Summer Shootout', '2026-08-22', '8:00 AM'],
+];
+
+const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+const DAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+
+function parseCsv(text) {
+  const rows = [];
+  let row = [], field = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) {
+      if (c === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else q = false; }
+      else field += c;
+    } else if (c === '"') q = true;
+    else if (c === ',') { row.push(field); field = ''; }
+    else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+    else if (c !== '\r') field += c;
+  }
+  if (field.length || row.length) { row.push(field); rows.push(row); }
+  return rows.filter(r => r.some(v => String(v).trim() !== ''));
+}
+
+function csvUrls(input) {
+  const raw = String(input || '').trim();
+  if (!raw) return [];
+  if (/output=csv/.test(raw)) return [raw];
+  const pub = raw.match(/\/spreadsheets\/d\/e\/([^/]+)/);
+  if (pub) return [`https://docs.google.com/spreadsheets/d/e/${pub[1]}/pub?single=true&output=csv`];
+  const id = raw.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/) || raw.match(/^([a-zA-Z0-9-_]{25,})$/);
+  if (!id) return [];
+  const gid = (raw.match(/[#&?]gid=(\d+)/) || [])[1];
+  const base = `https://docs.google.com/spreadsheets/d/${id[1]}`;
+  return [
+    `${base}/gviz/tq?tqx=out:csv${gid ? '&gid=' + gid : ''}`,
+    `${base}/export?format=csv${gid ? '&gid=' + gid : ''}`,
+  ];
+}
+
+function parseWhen(dateStr, timeStr) {
+  const d = String(dateStr || '').trim().replace(/^[A-Za-z]+,\s*/, '');
+  if (!d) return null;
+  let t = Date.parse(`${d} ${timeStr || ''}`.trim());
+  if (isNaN(t)) t = Date.parse(d);
+  if (isNaN(t)) t = Date.parse(`${d} ${new Date().getFullYear()}`);
+  if (isNaN(t)) {
+    const m = d.match(/^(\d{1,2})[/-](\d{1,2})$/);
+    if (m) t = new Date(new Date().getFullYear(), +m[1] - 1, +m[2]).getTime();
+  }
+  return isNaN(t) ? null : new Date(t);
+}
+
+function fmtTime(raw, when) {
+  const s = String(raw || '').trim();
+  if (s) return s.toUpperCase().replace(/\s+/g, ' ');
+  if (!when) return '';
+  let h = when.getHours(), m = when.getMinutes();
+  if (!h && !m) return 'ALL DAY';
+  const ap = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  return `${h}:${String(m).padStart(2, '0')} ${ap}`;
+}
+
+class Component extends DCLogic {
+  state = { rows: DEMO, now: new Date(), live: false };
+
+  componentDidMount() {
+    this.tick = setInterval(() => this.setState({ now: new Date() }), 15000);
+    this.load();
+    this.poll = setInterval(() => this.load(), 5 * 60 * 1000);
+  }
+  componentWillUnmount() {
+    clearInterval(this.tick);
+    clearInterval(this.poll);
+  }
+  componentDidUpdate(prev) {
+    if (prev.sheetUrl !== this.props.sheetUrl) this.load();
+  }
+
+  async load() {
+    const urls = csvUrls(this.props.sheetUrl);
+    for (const url of urls) {
+      try {
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) continue;
+        const rows = parseCsv(await res.text());
+        if (!rows.length) continue;
+        const head = rows[0].map(v => String(v).toLowerCase());
+        const body = /event|name|title/.test(head[0] || '') ? rows.slice(1) : rows;
+        if (body.length) { this.setState({ rows: body, live: true }); return; }
+      } catch (e) { /* try next endpoint */ }
+    }
+  }
+
+  events() {
+    const now = this.state.now;
+    const limit = Math.max(1, Math.min(8, this.props.eventCount ?? 6));
+    return this.state.rows
+      .map((r, i) => {
+        const when = parseWhen(r[1], r[2]);
+        return {
+          key: `${r[0]}-${i}`,
+          name: String(r[0] || '').trim(),
+          time: fmtTime(r[2], when),
+          when,
+        };
+      })
+      .filter(e => e.name && e.when && e.when.getTime() + 6 * 3600 * 1000 > now.getTime())
+      .sort((a, b) => a.when - b.when)
+      .slice(0, limit)
+      .map(e => ({
+        key: e.key,
+        name: e.name,
+        time: e.time,
+        weekday: DAYS[e.when.getDay()],
+        day: e.when.getDate(),
+        month: MONTHS[e.when.getMonth()],
+      }));
+  }
+
+  renderVals() {
+    const now = this.state.now;
+    let h = now.getHours();
+    const ap = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return {
+      events: this.events(),
+      clock: `${h}:${String(now.getMinutes()).padStart(2, '0')} ${ap}`,
+      dateLine: `${DAYS[now.getDay()]} ${MONTHS[now.getMonth()]} ${now.getDate()}`,
+      ctaTitle: this.props.ctaTitle ?? 'Scan for more info',
+      ctaSub: this.props.ctaSub ?? 'Spots go fast — grab yours at the front desk',
+      showClock: this.props.showClock ?? true,
+      showQr: this.props.showQr ?? true,
+    };
+  }
+}
+
+</script>
+</body>
+</html>
